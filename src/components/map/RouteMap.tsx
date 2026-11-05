@@ -106,6 +106,20 @@ const createCustomPin = (label: string, color: string, glowColor: string) => {
 const startPin = createCustomPin('A', '#059669', 'rgba(5,150,105,0.4)');
 const endPin = createCustomPin('B', '#0284c7', 'rgba(2,132,199,0.4)');
 
+// Phase 20 Task 1: Distinctive pulsing dot marker for live GPS tracking
+const liveUserPin = L.divIcon({
+  className: 'live-gps-user-marker',
+  html: `
+    <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;">
+      <span style="position: absolute; width: 30px; height: 30px; border-radius: 50%; background: rgba(16, 185, 129, 0.5); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></span>
+      <span style="position: relative; width: 16px; height: 16px; border-radius: 50%; background: #059669; border: 3px solid #ffffff; box-shadow: 0 0 10px rgba(5,150,105,0.8), 0 2px 6px rgba(0,0,0,0.3);"></span>
+    </div>
+  `,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  popupAnchor: [0, -16]
+});
+
 const POINT_A_DEFAULT: [number, number] = [12.9716, 77.5946]; // MG Road Central
 const POINT_B_DEFAULT: [number, number] = [12.9352, 77.6245]; // Koramangala Hub
 
@@ -227,26 +241,90 @@ export const RouteMap: React.FC = () => {
     }
   }, [activeRouteType, routingResult]);
 
-  // Phase 14 Task 2: Inner component that uses useMap() to auto-zoom camera on routeCoordinates
-  const RouteCameraAutoFitter: React.FC = () => {
+  // Phase 20 Task 1: Live user coordinates state for GPS navigation
+  const [liveCoordinates, setLiveCoordinates] = useState<[number, number] | null>(null);
+
+  // Phase 20 Task 1: Live Location Tracking (watchPosition)
+  useEffect(() => {
+    let watchId: number | null = null;
+
+    if (isNavigating) {
+      if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+        if (userLocation?.lat && userLocation?.lng) {
+          setLiveCoordinates([userLocation.lat, userLocation.lng]);
+        } else if (originCoords) {
+          setLiveCoordinates(originCoords);
+        }
+
+        watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            setLiveCoordinates([lat, lng]);
+          },
+          (error) => {
+            console.warn('[RouteMap] watchPosition notice:', error);
+            if (originCoords) {
+              setLiveCoordinates(originCoords);
+            }
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 1000,
+            timeout: 10000
+          }
+        );
+      } else if (originCoords) {
+        setLiveCoordinates(originCoords);
+      }
+    } else {
+      setLiveCoordinates(null);
+    }
+
+    return () => {
+      if (watchId !== null && typeof window !== 'undefined' && 'geolocation' in navigator) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [isNavigating, originCoords, userLocation]);
+
+  // Phase 14 & 20 Task 2: Camera Follow (Auto-Panning) and route framing
+  const RouteCameraAutoFitter: React.FC<{
+    isNavigating: boolean;
+    liveCoordinates: [number, number] | null;
+  }> = ({ isNavigating, liveCoordinates }) => {
     const map = useMap();
 
+    // Phase 20 Task 2: Camera follow user's live position (zoom 18) when navigating
     useEffect(() => {
-      if (routeCoordinates && routeCoordinates.length > 0) {
+      if (isNavigating && liveCoordinates) {
         try {
-          map.fitBounds(routeCoordinates, { padding: [50, 50] });
+          map.setView(liveCoordinates, 18, { animate: true });
         } catch (err) {
-          console.warn('[RouteMap] Camera fitBounds error:', err);
-        }
-      } else if (originCoords && destinationCoords) {
-        try {
-          const bounds = L.latLngBounds([originCoords, destinationCoords]);
-          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
-        } catch {
-          map.flyTo(originCoords, 13, { duration: 1.2 });
+          console.warn('[RouteMap] Camera auto-pan error:', err);
         }
       }
-    }, [map, routeCoordinates]);
+    }, [map, isNavigating, liveCoordinates]);
+
+    // Phase 14 Task 2: Fit entire journey bounds when not navigating
+    useEffect(() => {
+      if (!isNavigating) {
+        if (routeCoordinates && routeCoordinates.length > 0) {
+          try {
+            map.fitBounds(routeCoordinates, { padding: [50, 50] });
+          } catch (err) {
+            console.warn('[RouteMap] Camera fitBounds error:', err);
+          }
+        } else if (originCoords && destinationCoords) {
+          try {
+            const bounds = L.latLngBounds([originCoords, destinationCoords]);
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+          } catch {
+            map.flyTo(originCoords, 13, { duration: 1.2 });
+          }
+        }
+      }
+    }, [map, isNavigating, routeCoordinates, originCoords, destinationCoords]);
 
     return null;
   };
@@ -734,10 +812,10 @@ export const RouteMap: React.FC = () => {
                 type="button"
                 onClick={() => setIsNavigating(true)}
                 className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
-                title="Begin active turn-by-turn clean navigation"
+                title="Begin active in-app live GPS navigation"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Start Journey</span>
+                <span>In-App Navigation</span>
               </button>
             </div>
           </div>
@@ -867,8 +945,8 @@ export const RouteMap: React.FC = () => {
           className="w-full h-full"
           style={{ background: '#f8fafc' }}
         >
-          {/* Phase 14 Task 2: Auto-Zoom the Camera (fitBounds on routeCoordinates) */}
-          <RouteCameraAutoFitter />
+          {/* Phase 14 & 20 Task 2: Auto-Zoom & Live GPS Camera Follow */}
+          <RouteCameraAutoFitter isNavigating={isNavigating} liveCoordinates={liveCoordinates} />
 
           {/* OpenStreetMap Free Tiles */}
           <TileLayer
@@ -877,18 +955,29 @@ export const RouteMap: React.FC = () => {
             maxZoom={19}
           />
 
-          {/* Phase 14 Task 1: Leaflet Polyline using reversed [latitude, longitude] routeCoordinates */}
+          {/* Phase 20 Task 3: Google Maps-Style Route Line (Weight 8, Opacity 0.9, AtmosAi Emerald) */}
           {routeCoordinates.length > 0 && (
             <Polyline
               positions={routeCoordinates}
               pathOptions={{
-                color: activeRoute?.color || '#059669',
-                weight: 6,
-                opacity: 0.95,
+                color: '#059669',
+                weight: 8,
+                opacity: 0.9,
                 lineCap: 'round',
                 lineJoin: 'round'
               }}
             />
+          )}
+
+          {/* Phase 20 Task 1: Distinctive pulsing dot marker at live GPS coordinates */}
+          {isNavigating && liveCoordinates && (
+            <Marker position={liveCoordinates} icon={liveUserPin} zIndexOffset={1000}>
+              <Popup>
+                <div className="text-xs font-bold text-slate-900 p-1">
+                  Live GPS Position (In-App Navigation)
+                </div>
+              </Popup>
+            </Marker>
           )}
 
           {/* Point A (Origin) Marker */}
