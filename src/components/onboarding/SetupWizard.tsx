@@ -14,7 +14,8 @@ import {
   CheckCircle2, 
   Sparkles,
   AlertTriangle,
-  X
+  X,
+  MapPin
 } from 'lucide-react';
 
 interface SetupWizardProps {
@@ -32,6 +33,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
   const [commuteTime, setCommuteTime] = useState<string>(userProfile.commuteTime || '08:15');
   const [returnTime, setReturnTime] = useState<string>(userProfile.returnTime || '18:00');
   const [commuteMode, setCommuteMode] = useState<CommuteMode>(userProfile.commuteMode || 'bicycle');
+  const [destination, setDestination] = useState<string>(userProfile.destination || 'IISc Bangalore Campus');
   const [sensitivities, setSensitivities] = useState<string[]>(userProfile.sensitivities || ['Asthma']);
 
   // Calculated multiplier in real time
@@ -51,6 +53,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
       commuteTime,
       returnTime,
       commuteMode,
+      destination,
       sensitivities,
       exposureMultiplier: currentMultiplier,
       onboardingCompleted: true
@@ -213,6 +216,21 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Destination / College Location */}
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                  Primary Destination / College / Workplace
+                </label>
+                <input
+                  type="text"
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="e.g. IISc Bangalore Campus, RV College, Electronic City Tech Park"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-900/70 border border-white/10 text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 text-sm"
+                />
+              </div>
+
               {/* Emergency Contact Name */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
@@ -396,6 +414,10 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
                   <div className="flex justify-between gap-4">
                     <span className="text-slate-400">Departure:</span>
                     <span className="font-semibold text-cyan-300">{commuteTime} AM</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-400">Destination:</span>
+                    <span className="font-semibold text-cyan-300 truncate max-w-[140px]" title={destination}>{destination}</span>
                   </div>
                   <div className="flex justify-between gap-4">
                     <span className="text-slate-400">Emergency Alert:</span>

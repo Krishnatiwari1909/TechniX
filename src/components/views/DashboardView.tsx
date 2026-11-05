@@ -10,12 +10,14 @@ import {
   Navigation, 
   Volume2, 
   ShieldAlert, 
+  AlertTriangle,
   CheckCircle2, 
   Loader2, 
   VolumeX, 
   X,
   PhoneCall,
-  Radio
+  Radio,
+  Sparkles
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
@@ -26,15 +28,57 @@ export const DashboardView: React.FC = () => {
     setPm25Level, 
     setWindDirection, 
     setWindSpeed, 
-    setTelemetryHistory 
+    setTelemetryHistory,
+    departureTimeIndex
   } = useApp();
+
+  // Task 2: Check if Departure Time falls between 06:00 and 08:30 (indices 0 - 10)
+  const isMorningInversion = departureTimeIndex >= 0 && departureTimeIndex <= 10;
 
   // State for ElevenLabs Voice Shield & Emergency SOS
   const [isPlayingVoice, setIsPlayingVoice] = useState(false);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
+  const [briefingResponse, setBriefingResponse] = useState<string | null>(null);
+  const [isLoadingBriefing, setIsLoadingBriefing] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Task 4: The "Morning Briefing" Gemini Trigger
+  const handleGetCommuteBriefing = async () => {
+    setIsLoadingBriefing(true);
+    const destination = userProfile.destination || 'IISc Bangalore Campus';
+    const mode = userProfile.commuteMode || 'bicycle';
+    const currentAqi = Math.round(pm25Level * 1.35);
+
+    const hiddenPrompt = `User is commuting to their saved destination (${destination}) via ${mode}. Current AQI is ${currentAqi} (PM2.5: ${pm25Level} µg/m³). Give a 2-sentence safety briefing.`;
+
+    try {
+      const response = await fetch('http://localhost:8000/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: hiddenPrompt,
+          persona: userProfile.persona || 'commuter',
+          current_pm25: pm25Level
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error ${response.status}`);
+      }
+
+      const data = await response.json();
+      setBriefingResponse(data.response);
+    } catch (err) {
+      console.warn('Commute briefing API error, falling back:', err);
+      setBriefingResponse(
+        `AtmosAi Commute Advisory: PM2.5 levels along your route to ${destination} are currently ${pm25Level} µg/m³ for your ${mode} trip. Maintain active respiratory protection and consider shifting departure by 25 minutes to avoid peak diesel smog.`
+      );
+    } finally {
+      setIsLoadingBriefing(false);
+    }
+  };
 
   // Task 3: WebSocket Telemetry Integration & Real-Time Sync
   useEffect(() => {
@@ -259,6 +303,14 @@ export const DashboardView: React.FC = () => {
               <Radio className={`w-3 h-3 ${isWsConnected ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
               <span>{isWsConnected ? 'Live Sensor Stream (3s)' : 'Connecting WS...'}</span>
             </span>
+
+            {/* Task 2: Morning Inversion Dashboard Warning Badge */}
+            {isMorningInversion && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-pulse">
+                <AlertTriangle className="w-3 h-3 text-amber-400" />
+                <span>Morning Inversion: Pollutants trapped at ground level</span>
+              </span>
+            )}
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
             Welcome back, {userProfile.name}
@@ -266,10 +318,41 @@ export const DashboardView: React.FC = () => {
           <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
             AtmosAi is calculating micro-pollutant intake for your <strong className="text-cyan-300 capitalize">{userProfile.persona}</strong> profile ({userProfile.exposureMultiplier}x biological multiplier).
           </p>
+
+          {/* Task 2: Conditional Detailed Morning Inversion Banner */}
+          {isMorningInversion && (
+            <div className="mt-2.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-950/50 border border-amber-500/35 text-amber-300 text-xs font-semibold animate-in fade-in duration-200">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>
+                <strong>Morning Inversion Alert:</strong> Pollutants trapped at ground level. Vertical atmospheric mixing is suppressed (1.3x dose applied).
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Action Buttons: Voice Shield, Emergency SOS, Map Link */}
+        {/* Action Buttons: Morning Briefing, Voice Shield, Emergency SOS, Map Link */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Task 4: Prominent "Get Commute Briefing" Button */}
+          <button
+            type="button"
+            onClick={handleGetCommuteBriefing}
+            disabled={isLoadingBriefing}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-extrabold text-xs transition-all duration-300 shadow-[0_0_20px_rgba(20,184,166,0.35)] hover:shadow-[0_0_25px_rgba(20,184,166,0.55)] hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+            title="Generate AI commute safety advisory for your saved destination"
+          >
+            {isLoadingBriefing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                <span>Consulting Gemini...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-slate-950 animate-bounce" />
+                <span>Get Commute Briefing</span>
+              </>
+            )}
+          </button>
+
           {/* Activate AI Voice Shield Button */}
           <button
             type="button"
@@ -328,6 +411,58 @@ export const DashboardView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Task 4: Morning Commute Gemini Briefing Sleek Alert Card */}
+      {briefingResponse && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-950/80 via-emerald-950/70 to-slate-950/90 border border-teal-500/40 shadow-[0_0_25px_rgba(20,184,166,0.25)] animate-in fade-in slide-in-from-top-3 duration-300 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-400 via-emerald-400 to-cyan-400" />
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/30 shrink-0 mt-0.5">
+                <Sparkles className="w-5 h-5 text-teal-300" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="font-extrabold text-white text-sm tracking-tight flex items-center gap-1.5">
+                    Morning Commute Safety Briefing
+                  </h3>
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-950 border border-teal-700 text-teal-300">
+                    Google Gemini 1.5
+                  </span>
+                  <span className="text-[10px] text-slate-300 font-medium">
+                    Destination: <strong className="text-white">{userProfile.destination || 'IISc Bangalore Campus'}</strong>
+                  </span>
+                  <span className="text-[10px] text-slate-300 font-medium">
+                    Mode: <strong className="text-white capitalize">{userProfile.commuteMode || 'bicycle'}</strong>
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-teal-100/90 leading-relaxed font-medium">
+                  {briefingResponse}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => fallbackSpeak(briefingResponse)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-teal-300 hover:text-white transition-colors cursor-pointer"
+                title="Read briefing aloud"
+              >
+                <Volume2 className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setBriefingResponse(null)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                title="Dismiss briefing"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero Air Quality Telemetry & Simulation Gauge */}
       <AQIHeroCard />

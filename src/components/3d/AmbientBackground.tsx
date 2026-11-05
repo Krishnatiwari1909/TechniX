@@ -15,118 +15,129 @@ interface DriftingParticlesProps {
   windSpeed: number;
 }
 
-// Particle field inside R3F Canvas
-const DriftingParticles: React.FC<DriftingParticlesProps> = ({ pm25Level, windDirection, windSpeed }) => {
-  const pointsRef = useRef<THREE.Points>(null);
-  const materialRef = useRef<THREE.PointsMaterial>(null);
+// Task 2: Realistic 3D Round Particles using InstancedMesh with THREE.SphereGeometry
+const RealisticSpheres: React.FC<DriftingParticlesProps> = ({ pm25Level, windDirection, windSpeed }) => {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  // Task 1: Convert meteorological wind direction (degrees) and speed to X/Y velocity vectors
+  // Compute trigonometric wind vector
   const windVector = useMemo(() => {
     const rad = (windDirection * Math.PI) / 180;
-    const baseScalar = Math.max(windSpeed, 2) * 0.0014;
+    const baseScalar = Math.max(windSpeed, 2) * 0.0008; // Lowered velocity for gentle drift
     return {
       vx: Math.cos(rad) * baseScalar,
       vy: Math.sin(rad) * baseScalar
     };
   }, [windDirection, windSpeed]);
 
-  // Particle count based on PM2.5 level (min 400, max 2000)
+  // Particle count based on PM2.5 level (min 180, max 650 for smooth instanced rendering)
   const particleCount = useMemo(() => {
     const normalized = Math.min(Math.max((pm25Level - 15) / 185, 0), 1);
-    return Math.floor(400 + normalized * 1600);
+    return Math.floor(180 + normalized * 470);
   }, [pm25Level]);
 
-  // Positions and velocities
-  const [positions, speeds] = useMemo(() => {
-    const pos = new Float32Array(particleCount * 3);
-    const spd = new Float32Array(particleCount * 3);
-
+  // Store position, base velocities, scales, and random sine phases for wobble
+  const particles = useMemo(() => {
+    const data = [];
     for (let i = 0; i < particleCount; i++) {
-      const i3 = i * 3;
-      pos[i3] = (Math.random() - 0.5) * 45;       // X
-      pos[i3 + 1] = (Math.random() - 0.5) * 35;   // Y
-      pos[i3 + 2] = (Math.random() - 0.5) * 30;   // Z
-
-      spd[i3] = (Math.random() - 0.5) * 0.015;    // X drift
-      spd[i3 + 1] = 0.008 + Math.random() * 0.02; // Upward / floating
-      spd[i3 + 2] = (Math.random() - 0.5) * 0.015; // Z drift
+      data.push({
+        x: (Math.random() - 0.5) * 40,
+        y: (Math.random() - 0.5) * 32,
+        z: (Math.random() - 0.5) * 28,
+        // Lowered base velocities for slow organic drift
+        vx: (Math.random() - 0.5) * 0.004,
+        vy: 0.002 + Math.random() * 0.005,
+        vz: (Math.random() - 0.5) * 0.004,
+        scale: 0.8 + Math.random() * 0.8,
+        phase: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.6 + Math.random() * 0.8
+      });
     }
-    return [pos, spd];
+    return data;
   }, [particleCount]);
 
-  // Target color interpolates from soft blue (#38bdf8) to warning red (#ef4444)
+  // Target color interpolates from clean teal/emerald to amber to warning red
   const targetColor = useMemo(() => {
     const c = new THREE.Color();
     if (pm25Level <= 35) {
-      c.set('#38bdf8'); // Soft clean blue
+      c.set('#2dd4bf'); // Clean teal (#2dd4bf) to match forest theme
     } else if (pm25Level <= 75) {
       const t = (pm25Level - 35) / 40;
-      c.set('#38bdf8').lerp(new THREE.Color('#f59e0b'), t); // Amber
+      c.set('#2dd4bf').lerp(new THREE.Color('#f59e0b'), t); // Amber
     } else if (pm25Level <= 130) {
       const t = (pm25Level - 75) / 55;
       c.set('#f59e0b').lerp(new THREE.Color('#ef4444'), t); // Warning Red
     } else {
-      c.set('#dc2626'); // Severe Red
+      c.set('#dc2626'); // Hazardous Red
     }
     return c;
   }, [pm25Level]);
 
-  // Frame update - combines baseline drift with real-time wind physics
+  // Frame update - combines lowered base velocity, sine-wave Y wobble, and wind drift
   useFrame((state, delta) => {
-    if (!pointsRef.current) return;
+    if (!meshRef.current) return;
 
-    const geo = pointsRef.current.geometry;
-    const posAttr = geo.attributes.position;
-    const array = posAttr.array as Float32Array;
-    const speedMultiplier = 1 + (pm25Level / 200) * 0.8;
+    const time = state.clock.elapsedTime;
+    const speedMultiplier = 1 + (pm25Level / 200) * 0.5;
 
     for (let i = 0; i < particleCount; i++) {
-      const i3 = i * 3;
-      // Intrinsic drift + dynamic trigonometric wind velocity
-      array[i3] += (speeds[i3] + windVector.vx) * speedMultiplier;
-      array[i3 + 1] += (speeds[i3 + 1] + windVector.vy) * speedMultiplier;
-      array[i3 + 2] += speeds[i3 + 2] * speedMultiplier;
+      const p = particles[i];
 
-      // Wrap around bounds seamlessly
-      if (array[i3 + 1] > 22) array[i3 + 1] = -22;
-      if (array[i3 + 1] < -22) array[i3 + 1] = 22;
-      if (array[i3] > 28) array[i3] = -28;
-      if (array[i3] < -28) array[i3] = 28;
-      if (array[i3 + 2] > 18) array[i3 + 2] = -18;
-      if (array[i3 + 2] < -18) array[i3 + 2] = 18;
+      // Task 2: Sine-wave wobble on Y-axis for organic suspended-in-air physics
+      const wobbleY = Math.sin(time * p.wobbleSpeed + p.phase) * 0.005;
+
+      p.x += (p.vx + windVector.vx) * speedMultiplier;
+      p.y += (p.vy + windVector.vy + wobbleY) * speedMultiplier;
+      p.z += p.vz * speedMultiplier;
+
+      // Wrap around bounds
+      if (p.y > 20) p.y = -20;
+      if (p.y < -20) p.y = 20;
+      if (p.x > 26) p.x = -26;
+      if (p.x < -26) p.x = 26;
+      if (p.z > 16) p.z = -16;
+      if (p.z < -16) p.z = 16;
+
+      dummy.position.set(p.x, p.y, p.z);
+      const dynamicScale = p.scale * (1 + Math.min(pm25Level / 350, 0.4));
+      dummy.scale.set(dynamicScale, dynamicScale, dynamicScale);
+      dummy.updateMatrix();
+
+      meshRef.current.setMatrixAt(i, dummy.matrix);
     }
-    posAttr.needsUpdate = true;
 
-    pointsRef.current.rotation.y += delta * 0.03;
-    pointsRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.15) * 0.05;
+    meshRef.current.instanceMatrix.needsUpdate = true;
+
+    // Gentle global rotation
+    meshRef.current.rotation.y += delta * 0.015;
+    meshRef.current.rotation.x = Math.sin(time * 0.1) * 0.03;
 
     if (materialRef.current) {
       materialRef.current.color.lerp(targetColor, 0.05);
+      materialRef.current.emissive.lerp(targetColor, 0.05);
     }
   });
 
-  const particleSize = useMemo(() => {
-    return 0.12 + Math.min(pm25Level / 250, 0.22);
-  }, [pm25Level]);
-
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-        />
-      </bufferGeometry>
-      <pointsMaterial
+    <instancedMesh
+      ref={meshRef}
+      args={[undefined, undefined, particleCount]}
+      frustumCulled={false}
+    >
+      {/* Task 2: Perfectly round 3D spheres via THREE.SphereGeometry */}
+      <sphereGeometry args={[0.09, 10, 10]} />
+      <meshStandardMaterial
         ref={materialRef}
-        size={particleSize}
         color={targetColor}
+        emissive={targetColor}
+        emissiveIntensity={0.65}
+        roughness={0.2}
+        metalness={0.1}
         transparent
-        opacity={Math.min(0.45 + (pm25Level / 250) * 0.45, 0.9)}
-        blending={THREE.AdditiveBlending}
-        depthWrite={false}
+        opacity={Math.min(0.55 + (pm25Level / 250) * 0.35, 0.95)}
       />
-    </points>
+    </instancedMesh>
   );
 };
 
@@ -139,8 +150,8 @@ const WebGLFallback: React.FC<{ pm25Level: number }> = ({ pm25Level }) => {
       style={{
         zIndex: 0,
         background: isPolluted
-          ? 'radial-gradient(ellipse at top, rgba(239, 68, 68, 0.12) 0%, rgba(10, 17, 40, 0.95) 80%)'
-          : 'radial-gradient(ellipse at top, rgba(56, 189, 248, 0.12) 0%, rgba(10, 17, 40, 0.95) 80%)'
+          ? 'radial-gradient(ellipse at top, rgba(239, 68, 68, 0.15) 0%, rgba(4, 28, 26, 0.98) 80%)'
+          : 'radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15) 0%, rgba(4, 28, 26, 0.98) 80%)'
       }}
     />
   );
@@ -178,7 +189,7 @@ export const AmbientBackground: React.FC<AmbientBackgroundProps> = (props) => {
         style={{
           background: pm25Level > 75
             ? 'radial-gradient(circle at 50% 15%, rgba(239, 68, 68, 0.15) 0%, transparent 60%)'
-            : 'radial-gradient(circle at 50% 15%, rgba(56, 189, 248, 0.12) 0%, transparent 60%)'
+            : 'radial-gradient(circle at 50% 15%, rgba(20, 184, 166, 0.14) 0%, transparent 60%)'
         }}
       />
 
@@ -188,8 +199,9 @@ export const AmbientBackground: React.FC<AmbientBackgroundProps> = (props) => {
         gl={{ antialias: true, alpha: true, powerPreference: 'low-power' }}
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       >
-        <ambientLight intensity={0.5} />
-        <DriftingParticles
+        <ambientLight intensity={0.8} />
+        <pointLight position={[10, 10, 10]} intensity={1.2} />
+        <RealisticSpheres
           pm25Level={pm25Level}
           windDirection={windDirection}
           windSpeed={windSpeed}
@@ -200,4 +212,3 @@ export const AmbientBackground: React.FC<AmbientBackgroundProps> = (props) => {
 };
 
 export default AmbientBackground;
-

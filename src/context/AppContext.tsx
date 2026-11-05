@@ -34,6 +34,7 @@ const DEFAULT_PROFILE: UserProfile = {
   commuteTime: '08:15',
   returnTime: '18:00',
   commuteMode: 'bicycle',
+  destination: 'IISc Bangalore Campus',
   sensitivities: ['Asthma'],
   exposureMultiplier: 2.45,
   onboardingCompleted: true
@@ -59,7 +60,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   ]);
   const [departureTimeIndex, setDepartureTimeIndex] = useState<number>(4); // 08:00 AM
   const [activeTab, setActiveTab] = useState<'home' | 'map' | 'alerts' | 'profile'>('home');
-  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('atmosai_user_profile_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.onboardingCompleted) {
+          return false; // Skip wizard on subsequent visits
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read onboarding state from localStorage', e);
+    }
+    return false;
+  });
   const [chatOpen, setChatOpen] = useState<boolean>(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string>('route-clean');
 

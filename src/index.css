@@ -25,7 +25,7 @@
 
 /* Glassmorphism Classes */
 .glass-panel {
-  background: rgba(13, 23, 49, 0.7);
+  background: rgba(4, 28, 26, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -36,10 +36,10 @@
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .glass-panel-hover:hover {
-  background: rgba(17, 30, 64, 0.82);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(6, 36, 34, 0.85);
+  border-color: rgba(20, 184, 166, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 14px 35px -8px rgba(0, 0, 0, 0.7), inset 0 1px 2px 0 rgba(255, 255, 255, 0.15);
+  box-shadow: 0 14px 35px -8px rgba(0, 0, 0, 0.7), inset 0 1px 2px 0 rgba(20, 184, 166, 0.15);
 }
 
 .glass-pill {

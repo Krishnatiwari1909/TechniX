@@ -24,7 +24,7 @@ const MainLayout: React.FC = () => {
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-[#0A1128] text-slate-100 flex flex-col md:flex-row antialiased overflow-x-hidden">
+    <div className="relative min-h-screen bg-[#041C1A] text-slate-100 flex flex-col md:flex-row antialiased overflow-x-hidden">
       {/* 1. 3D Ambient Background at z-index 0 */}
       <AmbientBackground pm25Level={pm25Level} />
 

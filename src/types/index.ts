@@ -10,6 +10,7 @@ export interface UserProfile {
   commuteTime: string; // e.g. "08:15"
   returnTime: string;  // e.g. "18:00"
   commuteMode: CommuteMode;
+  destination: string; // e.g. "IISc Bangalore Campus"
   sensitivities: string[]; // e.g. "Asthma", "Allergies"
   exposureMultiplier: number;
   onboardingCompleted: boolean;
