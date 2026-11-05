@@ -1,0 +1,21 @@
+{
+  "name": "AtmosAi — Personalized Air Quality & Clean Routing",
+  "short_name": "AtmosAi",
+  "description": "Personalized environmental early-warning and demographic air quality routing system",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0A1128",
+  "theme_color": "#0A1128",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["weather", "health", "navigation"]
+}
+
