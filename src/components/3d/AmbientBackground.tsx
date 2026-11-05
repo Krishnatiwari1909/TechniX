@@ -1,15 +1,34 @@
 import React, { useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { useApp } from '../../context/AppContext';
+
+interface AmbientBackgroundProps {
+  pm25Level?: number;
+  windDirection?: number;
+  windSpeed?: number;
+}
 
 interface DriftingParticlesProps {
   pm25Level: number;
+  windDirection: number;
+  windSpeed: number;
 }
 
 // Particle field inside R3F Canvas
-const DriftingParticles: React.FC<DriftingParticlesProps> = ({ pm25Level }) => {
+const DriftingParticles: React.FC<DriftingParticlesProps> = ({ pm25Level, windDirection, windSpeed }) => {
   const pointsRef = useRef<THREE.Points>(null);
   const materialRef = useRef<THREE.PointsMaterial>(null);
+
+  // Task 1: Convert meteorological wind direction (degrees) and speed to X/Y velocity vectors
+  const windVector = useMemo(() => {
+    const rad = (windDirection * Math.PI) / 180;
+    const baseScalar = Math.max(windSpeed, 2) * 0.0014;
+    return {
+      vx: Math.cos(rad) * baseScalar,
+      vy: Math.sin(rad) * baseScalar
+    };
+  }, [windDirection, windSpeed]);
 
   // Particle count based on PM2.5 level (min 400, max 2000)
   const particleCount = useMemo(() => {
@@ -52,7 +71,7 @@ const DriftingParticles: React.FC<DriftingParticlesProps> = ({ pm25Level }) => {
     return c;
   }, [pm25Level]);
 
-  // Frame update
+  // Frame update - combines baseline drift with real-time wind physics
   useFrame((state, delta) => {
     if (!pointsRef.current) return;
 
@@ -63,16 +82,18 @@ const DriftingParticles: React.FC<DriftingParticlesProps> = ({ pm25Level }) => {
 
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
-      array[i3] += speeds[i3] * speedMultiplier;
-      array[i3 + 1] += speeds[i3 + 1] * speedMultiplier;
+      // Intrinsic drift + dynamic trigonometric wind velocity
+      array[i3] += (speeds[i3] + windVector.vx) * speedMultiplier;
+      array[i3 + 1] += (speeds[i3 + 1] + windVector.vy) * speedMultiplier;
       array[i3 + 2] += speeds[i3 + 2] * speedMultiplier;
 
-      // Wrap around bounds
-      if (array[i3 + 1] > 20) array[i3 + 1] = -20;
-      if (array[i3] > 25) array[i3] = -25;
-      if (array[i3] < -25) array[i3] = 25;
-      if (array[i3 + 2] > 15) array[i3 + 2] = -15;
-      if (array[i3 + 2] < -15) array[i3 + 2] = 15;
+      // Wrap around bounds seamlessly
+      if (array[i3 + 1] > 22) array[i3 + 1] = -22;
+      if (array[i3 + 1] < -22) array[i3 + 1] = 22;
+      if (array[i3] > 28) array[i3] = -28;
+      if (array[i3] < -28) array[i3] = 28;
+      if (array[i3 + 2] > 18) array[i3 + 2] = -18;
+      if (array[i3 + 2] < -18) array[i3 + 2] = 18;
     }
     posAttr.needsUpdate = true;
 
@@ -125,7 +146,11 @@ const WebGLFallback: React.FC<{ pm25Level: number }> = ({ pm25Level }) => {
   );
 };
 
-export const AmbientBackground: React.FC<{ pm25Level: number }> = ({ pm25Level }) => {
+export const AmbientBackground: React.FC<AmbientBackgroundProps> = (props) => {
+  const context = useApp();
+  const pm25Level = props.pm25Level ?? context.pm25Level;
+  const windDirection = props.windDirection ?? context.windDirection;
+  const windSpeed = props.windSpeed ?? context.windSpeed;
   const [hasWebGL, setHasWebGL] = React.useState(true);
 
   useEffect(() => {
@@ -164,7 +189,11 @@ export const AmbientBackground: React.FC<{ pm25Level: number }> = ({ pm25Level }
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       >
         <ambientLight intensity={0.5} />
-        <DriftingParticles pm25Level={pm25Level} />
+        <DriftingParticles
+          pm25Level={pm25Level}
+          windDirection={windDirection}
+          windSpeed={windSpeed}
+        />
       </Canvas>
     </div>
   );

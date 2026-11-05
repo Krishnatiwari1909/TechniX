@@ -5,6 +5,12 @@ import { PERSONA_CONFIGS } from '../data/mockData';
 interface AppContextType {
   pm25Level: number;
   setPm25Level: (level: number) => void;
+  windDirection: number;
+  setWindDirection: (deg: number) => void;
+  windSpeed: number;
+  setWindSpeed: (spd: number) => void;
+  telemetryHistory: { time: string; pm25: number }[];
+  setTelemetryHistory: React.Dispatch<React.SetStateAction<{ time: string; pm25: number }[]>>;
   departureTimeIndex: number;
   setDepartureTimeIndex: (idx: number) => void;
   userProfile: UserProfile;
@@ -37,6 +43,20 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [pm25Level, setPm25Level] = useState<number>(84);
+  const [windDirection, setWindDirection] = useState<number>(65);
+  const [windSpeed, setWindSpeed] = useState<number>(11.2);
+  const [telemetryHistory, setTelemetryHistory] = useState<{ time: string; pm25: number }[]>([
+    { time: 'T-27s', pm25: 81 },
+    { time: 'T-24s', pm25: 83 },
+    { time: 'T-21s', pm25: 82 },
+    { time: 'T-18s', pm25: 85 },
+    { time: 'T-15s', pm25: 84 },
+    { time: 'T-12s', pm25: 86 },
+    { time: 'T-9s', pm25: 83 },
+    { time: 'T-6s', pm25: 85 },
+    { time: 'T-3s', pm25: 84 },
+    { time: 'Live', pm25: 84 }
+  ]);
   const [departureTimeIndex, setDepartureTimeIndex] = useState<number>(4); // 08:00 AM
   const [activeTab, setActiveTab] = useState<'home' | 'map' | 'alerts' | 'profile'>('home');
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
@@ -88,6 +108,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       value={{
         pm25Level,
         setPm25Level,
+        windDirection,
+        setWindDirection,
+        windSpeed,
+        setWindSpeed,
+        telemetryHistory,
+        setTelemetryHistory,
         departureTimeIndex,
         setDepartureTimeIndex,
         userProfile,

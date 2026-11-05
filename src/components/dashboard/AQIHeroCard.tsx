@@ -1,9 +1,17 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { Wind, Droplets, Thermometer, RefreshCw } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, Tooltip, YAxis } from 'recharts';
 
 export const AQIHeroCard: React.FC = () => {
-  const { pm25Level, setPm25Level, userProfile } = useApp();
+  const { 
+    pm25Level, 
+    setPm25Level, 
+    userProfile, 
+    windSpeed, 
+    windDirection, 
+    telemetryHistory 
+  } = useApp();
 
   const aqiScore = Math.round(pm25Level * 1.35);
 
@@ -75,6 +83,47 @@ export const AQIHeroCard: React.FC = () => {
         </div>
       </div>
 
+      {/* Task 2: Rolling Telemetry Sparkline (Capped at 10 Data Points) */}
+      <div className="my-2 p-3 rounded-xl bg-slate-900/40 border border-white/5">
+        <div className="flex items-center justify-between text-[11px] mb-1">
+          <span className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+            Rolling Sensor Telemetry (10-Point Window)
+          </span>
+          <span className="font-mono text-cyan-300 text-[10px]">
+            Live: <strong className="text-white">{pm25Level} µg/m³</strong>
+          </span>
+        </div>
+        <div className="h-14 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={telemetryHistory} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+              <YAxis domain={['dataMin - 4', 'dataMax + 4']} hide />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    return (
+                      <div className="bg-slate-950/90 border border-white/10 px-2 py-1 rounded text-[10px] text-cyan-300 font-mono shadow-md backdrop-blur-md">
+                        {payload[0].value} µg/m³
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="pm25"
+                stroke="#38bdf8"
+                strokeWidth={2.2}
+                dot={{ r: 2.5, fill: '#38bdf8', strokeWidth: 0 }}
+                activeDot={{ r: 4.5, fill: '#06b6d4', stroke: '#fff', strokeWidth: 1.5 }}
+                isAnimationActive={true}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Weather Telemetry Row */}
       <div className="grid grid-cols-3 gap-2 my-2 py-3 border-y border-white/5 text-xs text-slate-300">
         <div className="flex items-center gap-2">
@@ -94,8 +143,8 @@ export const AQIHeroCard: React.FC = () => {
         <div className="flex items-center gap-2">
           <Wind className="w-4 h-4 text-emerald-400 shrink-0" />
           <div>
-            <span className="text-[10px] text-slate-400 block">Wind Speed</span>
-            <span className="font-semibold font-mono">2.8 m/s WSW</span>
+            <span className="text-[10px] text-slate-400 block">Wind Vector</span>
+            <span className="font-semibold font-mono">{windSpeed} km/h • {windDirection}°</span>
           </div>
         </div>
       </div>

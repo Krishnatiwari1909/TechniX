@@ -1,12 +1,15 @@
 import os
 import io
 import re
+import time
+import random
+import asyncio
 import wave
 import struct
 import math
 import base64
 from typing import Optional
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -313,6 +316,64 @@ async def trigger_emergency_sos(payload: SOSRequest):
     )
 
 # ==============================================================================
+# 4. WebSocket /ws/telemetry (Live IoT Sensor Stream)
+# ==============================================================================
+
+@app.websocket("/ws/telemetry")
+async def websocket_telemetry(websocket: WebSocket):
+    """
+    Simulates a live IoT ambient air quality sensor stream in Bengaluru.
+    Yields randomized, realistic PM2.5 readings every 3 seconds to connected clients.
+    """
+    await websocket.accept()
+    current_pm25 = 84.0
+
+    try:
+        while True:
+            # Random walk drift simulation (-3.5 to +3.5 µg/m³)
+            delta = round(random.uniform(-3.5, 3.5), 1)
+            current_pm25 = round(max(20.0, min(195.0, current_pm25 + delta)), 1)
+
+            # Determine category & visual telemetry
+            if current_pm25 <= 50:
+                category = "Good"
+                status_color = "#22c55e"
+            elif current_pm25 <= 100:
+                category = "Moderate"
+                status_color = "#38bdf8"
+            elif current_pm25 <= 150:
+                category = "Unhealthy for Sensitive Groups"
+                status_color = "#f59e0b"
+            else:
+                category = "Hazardous"
+                status_color = "#ef4444"
+
+            wind_dir = round((65.0 + random.uniform(-15.0, 15.0)) % 360, 1)
+            wind_spd = round(max(3.0, 11.2 + random.uniform(-2.5, 2.5)), 1)
+
+            telemetry_data = {
+                "pm25": current_pm25,
+                "aqi": int(current_pm25 * 1.35),
+                "category": category,
+                "color": status_color,
+                "temperature": round(26.0 + random.uniform(-0.5, 0.5), 1),
+                "humidity": round(58.0 + random.uniform(-1.0, 1.0), 1),
+                "wind_direction": wind_dir,
+                "wind_speed": wind_spd,
+                "sensor_id": "BLR-SOUTH-CORRIDOR-04",
+                "timestamp": int(time.time())
+            }
+
+            await websocket.send_json(telemetry_data)
+            await asyncio.sleep(3)
+
+    except WebSocketDisconnect:
+        # Graceful disconnect when client leaves tab or navigates away
+        pass
+    except Exception as e:
+        print(f"[WebSocket /ws/telemetry error]: {e}")
+
+# ==============================================================================
 # Health Check Endpoint
 # ==============================================================================
 
@@ -340,6 +401,7 @@ async def root():
             "POST /api/chat",
             "POST /api/voice-alert",
             "POST /api/sos",
-            "GET /api/health"
+            "GET /api/health",
+            "WS /ws/telemetry"
         ]
     }
