@@ -43,6 +43,7 @@ export interface CalculatedRoute {
   distanceKm: number;
   durationMinutes: number;
   geojson: Feature<LineString>;
+  coordinates?: [number, number][];
   averageAqi: number;
   highAqiDistancePct: number;
   isSafe: boolean;
@@ -160,6 +161,7 @@ export const processRouteDecision = (params: {
         properties: { id: 'shortest', name: 'Direct Route', color: '#059669' },
         geometry: { type: 'LineString', coordinates: shortestCoordinates }
       },
+      coordinates: shortestCoordinates,
       averageAqi: shortestEval.averageAqi,
       highAqiDistancePct: shortestEval.highAqiDistancePct,
       isSafe: true,
@@ -193,6 +195,7 @@ export const processRouteDecision = (params: {
       properties: { id: 'shortest', name: 'Shortest Route', color: '#f43f5e' },
       geometry: { type: 'LineString', coordinates: shortestCoordinates }
     },
+    coordinates: shortestCoordinates,
     averageAqi: shortestEval.averageAqi,
     highAqiDistancePct: shortestEval.highAqiDistancePct,
     isSafe: false,
@@ -237,6 +240,7 @@ export const processRouteDecision = (params: {
         properties: { id: 'healthiest', name: 'Clean Bypass', color: '#059669' },
         geometry: { type: 'LineString', coordinates: alternativeCoordinates }
       },
+      coordinates: alternativeCoordinates,
       averageAqi: alternativeEval.averageAqi,
       highAqiDistancePct: alternativeEval.highAqiDistancePct,
       isSafe: alternativeEval.isSafe,
