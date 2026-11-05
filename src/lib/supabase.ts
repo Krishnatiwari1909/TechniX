@@ -32,33 +32,43 @@ export interface UserProfileRow {
 
 /**
  * Helper to calculate personalized biological multiplier based on fetched Supabase profile
+ * Phase 19 Task 3: Base is 1.0x (Car), 1.5x (Two-Wheeler), 1.8x (Bicycle), or 2.0x (Walking).
+ * If "+ Asthma" or "+ Cardiovascular", add 0.5x penalty.
  */
 export function calculateDynamicMultiplier(
-  persona: string | null | undefined,
+  personaOrSensitivities: string | string[] | null | undefined,
   transportMode: string | null | undefined
 ): number {
-  let base = 1.2; // Standard base
-
-  // Persona adjustments
-  const p = (persona || 'standard').toLowerCase();
-  if (p === 'asthmatic') {
-    base = 2.1;
-  } else if (p === 'athlete' || p === 'runner') {
-    base = 1.85;
-  }
-
-  // Transport mode ventilation / outdoor exposure adjustments
-  const mode = (transportMode || 'bike').toLowerCase();
-  if (mode === 'bike' || mode === 'bicycle' || mode === 'two-wheeler') {
-    base += 0.45;
+  let base = 1.0;
+  const mode = (transportMode || '').toLowerCase();
+  
+  if (mode === 'car') {
+    base = 1.0;
+  } else if (mode === 'two-wheeler' || mode === 'motorbike' || mode === 'motorcycle') {
+    base = 1.5;
+  } else if (mode === 'bike' || mode === 'bicycle') {
+    base = 1.8;
   } else if (mode === 'walk' || mode === 'walking') {
-    base += 0.35;
+    base = 2.0;
   } else if (mode === 'transit' || mode === 'bus' || mode === 'metro') {
-    base += 0.15;
-  } else if (mode === 'car') {
-    base += 0.05;
+    base = 1.2;
   }
 
-  return Math.round(base * 100) / 100;
+  let hasPenalty = false;
+  if (Array.isArray(personaOrSensitivities)) {
+    hasPenalty = personaOrSensitivities.some(s => {
+      const lower = s.toLowerCase();
+      return lower.includes('asthma') || lower.includes('cardio');
+    });
+  } else if (typeof personaOrSensitivities === 'string') {
+    const lower = personaOrSensitivities.toLowerCase();
+    hasPenalty = lower.includes('asthma') || lower.includes('asthmatic') || lower.includes('cardio');
+  }
+
+  if (hasPenalty) {
+    base += 0.5;
+  }
+
+  return Math.round(base * 10) / 10;
 }
 

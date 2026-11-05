@@ -191,20 +191,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const calculateMultiplier = (persona: PersonaType, mode: CommuteMode, sensitivities: string[]): number => {
-    let base = PERSONA_CONFIGS[persona]?.baseMultiplier || 1.5;
-    
-    // Mode multiplier
-    if (mode === 'bicycle' || mode === 'walking') base += 0.35;
-    else if (mode === 'two-wheeler') base += 0.25;
-    else if (mode === 'transit') base += 0.10;
-    
-    // Sensitivities
-    if (sensitivities.includes('Asthma')) base += 0.40;
-    if (sensitivities.includes('Cardiovascular')) base += 0.30;
-    if (sensitivities.includes('Allergies')) base += 0.15;
-    
-    return Math.round(base * 100) / 100;
+  // Phase 19 Task 3: Dynamic math multiplier:
+  // Base: 1.0x (Car), 1.5x (Two-Wheeler), 1.8x (Bicycle), 2.0x (Walking).
+  // Penalty: +0.5x if Asthma or Cardiovascular is checked.
+  const calculateMultiplier = (_persona: PersonaType, mode: CommuteMode, sensitivities: string[]): number => {
+    let base = 1.0;
+    const m = (mode || '').toLowerCase();
+    if (m === 'walking' || m === 'walk') {
+      base = 2.0;
+    } else if (m === 'bicycle' || m === 'bike') {
+      base = 1.8;
+    } else if (m === 'two-wheeler' || m === 'motorbike' || m === 'motorcycle') {
+      base = 1.5;
+    } else if (m === 'transit' || m === 'bus') {
+      base = 1.2;
+    } else if (m === 'car') {
+      base = 1.0;
+    }
+
+    const hasPenalty = sensitivities && sensitivities.some(s => {
+      const lower = s.toLowerCase();
+      return lower.includes('asthma') || lower.includes('cardio');
+    });
+
+    if (hasPenalty) {
+      base += 0.5;
+    }
+
+    return Math.round(base * 10) / 10;
   };
 
   const updateProfile = (updates: Partial<UserProfile>) => {

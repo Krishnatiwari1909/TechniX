@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PersonaType, CommuteMode } from '../../types';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { 
   Activity, 
   Baby, 
@@ -27,7 +28,28 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
   const { userProfile, updateProfile, calculateMultiplier } = useApp();
   
   const [step, setStep] = useState<number>(1);
+  const [userName, setUserName] = useState<string>(() => {
+    return localStorage.getItem('atmosai_user_name') || userProfile.name || 'Commuter';
+  });
   const [selectedPersona, setSelectedPersona] = useState<PersonaType>(userProfile.persona || 'runner');
+
+  useEffect(() => {
+    const fetchUserMeta = async () => {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const metaName = user.user_metadata?.full_name;
+          if (metaName) {
+            setUserName(metaName);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not read user meta in wizard:', err);
+      }
+    };
+    fetchUserMeta();
+  }, []);
   const [emergencyName, setEmergencyName] = useState<string>(userProfile.emergencyName || 'Partner / Family');
   const [emergencyContact, setEmergencyContact] = useState<string>(userProfile.emergencyContact || '+1 (555) 382-9912');
   const [commuteTime, setCommuteTime] = useState<string>(userProfile.commuteTime || '08:15');
@@ -45,8 +67,9 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
     );
   };
 
-  const handleFinish = () => {
-    updateProfile({
+  const handleSaveAndRedirect = async () => {
+    const profileData = {
+      name: userName || userProfile.name || 'Commuter',
       persona: selectedPersona,
       emergencyName,
       emergencyContact,
@@ -57,7 +80,34 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
       sensitivities,
       exposureMultiplier: currentMultiplier,
       onboardingCompleted: true
-    });
+    };
+
+    updateProfile(profileData);
+    try {
+      localStorage.setItem('atmosai_user_profile_v2', JSON.stringify(profileData));
+      localStorage.setItem('atmosai_visited', 'true');
+      localStorage.setItem('atmosai_authenticated', 'true');
+    } catch (e) {
+      console.warn('localStorage save notice:', e);
+    }
+
+    if (isSupabaseConfigured()) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase.from('user_profiles').upsert({
+            id: user.id,
+            full_name: profileData.name,
+            transport_mode: commuteMode,
+            health_persona: selectedPersona,
+            updated_at: new Date().toISOString()
+          });
+        }
+      } catch (err) {
+        console.warn('[SetupWizard] Supabase user_profiles save error:', err);
+      }
+    }
+
     if (onComplete) onComplete();
   };
 
@@ -295,8 +345,8 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
               <label className="text-xs font-semibold text-slate-700">
                 Primary Commute Mode
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {(['bicycle', 'walking', 'transit', 'car'] as CommuteMode[]).map((mode) => (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {(['two-wheeler', 'bicycle', 'walking', 'transit', 'car'] as CommuteMode[]).map((mode) => (
                   <button
                     key={mode}
                     type="button"
@@ -307,7 +357,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
                         : 'border-stone-200 bg-stone-50 text-slate-600 hover:bg-stone-100'
                     }`}
                   >
-                    {mode === 'transit' ? 'Public Transit' : mode}
+                    {mode === 'two-wheeler' ? 'Two-Wheeler' : mode === 'transit' ? 'Public Transit' : mode}
                   </button>
                 ))}
               </div>
@@ -351,7 +401,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
               </button>
               <button
                 type="button"
-                onClick={() => setStep(3)}
+                onClick={handleSaveAndRedirect}
                 className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition-all shadow-sm cursor-pointer"
               >
                 Review Exposure Profile
@@ -446,7 +496,7 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
               </button>
               <button
                 type="button"
-                onClick={handleFinish}
+                onClick={handleSaveAndRedirect}
                 className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm transition-all shadow-md cursor-pointer"
               >
                 Launch AtmosAi Dashboard

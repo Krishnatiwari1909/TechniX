@@ -38,6 +38,9 @@ export const Auth: React.FC<AuthProps> = ({
 
     try {
       if (isSignUp) {
+        if (fullName.trim()) {
+          localStorage.setItem('atmosai_user_name', fullName.trim());
+        }
         // Sign Up Flow
         const { data, error } = await supabase.auth.signUp({
           email,

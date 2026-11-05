@@ -70,9 +70,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onOpenAuth, onOpenSetup }) => {
 
 export const App: React.FC = () => {
   const [authScreen, setAuthScreen] = useState<'auth' | 'setup' | 'app'>(() => {
-    // If user has visited before or skipped, default to 'app'
-    const hasVisited = localStorage.getItem('atmosai_visited');
-    return hasVisited ? 'app' : 'auth';
+    // Phase 19 Task 2: Root loads Auth.tsx if no user is authenticated
+    const isAuthenticated = localStorage.getItem('atmosai_authenticated') === 'true';
+    return isAuthenticated ? 'app' : 'auth';
   });
 
   // Check Supabase session on startup
@@ -80,39 +80,54 @@ export const App: React.FC = () => {
     if (isSupabaseConfigured()) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session) {
-          localStorage.setItem('atmosai_visited', 'true');
-          setAuthScreen('app');
+          localStorage.setItem('atmosai_authenticated', 'true');
+          setAuthScreen(prev => (prev === 'setup' ? 'setup' : 'app'));
+        } else {
+          localStorage.removeItem('atmosai_authenticated');
+          setAuthScreen('auth');
         }
       });
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if (session) {
-          localStorage.setItem('atmosai_visited', 'true');
+          localStorage.setItem('atmosai_authenticated', 'true');
+          if (event === 'SIGNED_IN') {
+            setAuthScreen(prev => (prev === 'setup' ? 'setup' : 'app'));
+          }
+        } else if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('atmosai_authenticated');
+          setAuthScreen('auth');
         }
       });
 
       return () => {
         subscription.unsubscribe();
       };
+    } else {
+      const isAuthenticated = localStorage.getItem('atmosai_authenticated') === 'true';
+      if (!isAuthenticated) {
+        setAuthScreen('auth');
+      }
     }
   }, []);
 
   const handleLoginSuccess = () => {
-    localStorage.setItem('atmosai_visited', 'true');
+    localStorage.setItem('atmosai_authenticated', 'true');
     setAuthScreen('app');
   };
 
   const handleSignUpSuccess = () => {
-    localStorage.setItem('atmosai_visited', 'true');
+    localStorage.setItem('atmosai_authenticated', 'true');
     setAuthScreen('setup');
   };
 
   const handleSetupComplete = () => {
+    localStorage.setItem('atmosai_authenticated', 'true');
     setAuthScreen('app');
   };
 
   const handleGuestContinue = () => {
-    localStorage.setItem('atmosai_visited', 'true');
+    localStorage.setItem('atmosai_authenticated', 'true');
     setAuthScreen('app');
   };
 
@@ -129,7 +144,7 @@ export const App: React.FC = () => {
   if (authScreen === 'setup') {
     return (
       <AppProvider>
-        <ProfileSetup onComplete={handleSetupComplete} />
+        <SetupWizard onComplete={handleSetupComplete} />
       </AppProvider>
     );
   }
