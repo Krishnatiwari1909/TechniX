@@ -7,10 +7,15 @@ import {
   User, 
   Activity, 
   Settings2,
-  Wind
+  Wind,
+  LogIn
 } from 'lucide-react';
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  onOpenAuth?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ onOpenAuth }) => {
   const { activeTab, setActiveTab, userProfile, setShowOnboarding, pm25Level } = useApp();
 
   const navItems = [
@@ -117,15 +122,28 @@ export const Sidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Setup Wizard Trigger Button */}
-        <button
-          type="button"
-          onClick={() => setShowOnboarding(true)}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs text-slate-700 border border-stone-200 transition-all font-semibold cursor-pointer"
-        >
-          <Settings2 className="w-3.5 h-3.5 text-slate-600" />
-          <span>Relaunch Setup Wizard</span>
-        </button>
+        {/* Setup Wizard & Supabase Auth Buttons */}
+        <div className="space-y-1.5">
+          <button
+            type="button"
+            onClick={() => setShowOnboarding(true)}
+            className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-xs text-slate-700 border border-stone-200 transition-all font-semibold cursor-pointer"
+          >
+            <Settings2 className="w-3.5 h-3.5 text-slate-600" />
+            <span>Setup Wizard</span>
+          </button>
+
+          {onOpenAuth && (
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-xs text-emerald-800 border border-emerald-200 transition-all font-semibold cursor-pointer"
+            >
+              <LogIn className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Supabase Account</span>
+            </button>
+          )}
+        </div>
 
         {/* Ambient telemetry live ticker */}
         <div className="flex items-center justify-between px-1 text-[11px] text-slate-400 font-mono">

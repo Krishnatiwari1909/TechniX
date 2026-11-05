@@ -4,6 +4,7 @@ import { PredictedVsActualChart } from '../dashboard/PredictedVsActualChart';
 import { TimeShiftSlider } from '../dashboard/TimeShiftSlider';
 import { LungsSavedCard } from '../dashboard/LungsSavedCard';
 import { useApp } from '../../context/AppContext';
+import { supabase, isSupabaseConfigured, calculateDynamicMultiplier } from '../../lib/supabase';
 import { 
   ArrowRight, 
   Navigation, 
@@ -24,6 +25,7 @@ export const DashboardView: React.FC = () => {
   const { 
     setActiveTab, 
     userProfile, 
+    updateProfile,
     pm25Level, 
     setPm25Level, 
     setWindDirection, 
@@ -33,6 +35,41 @@ export const DashboardView: React.FC = () => {
     userLocation,
     isLocating
   } = useApp();
+
+  // Task 5: Supabase logged-in user profile fetch on mount
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchSupabaseProfile = async () => {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data, error } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (!isCancelled && data && !error) {
+            const fetchedMultiplier = calculateDynamicMultiplier(data.health_persona, data.transport_mode);
+            updateProfile({
+              name: data.full_name || userProfile.name,
+              commuteMode: data.transport_mode === 'walk' ? 'walking' : (data.transport_mode === 'bike' ? 'bicycle' : (data.transport_mode || 'bicycle')),
+              persona: data.health_persona === 'athlete' ? 'runner' : (data.health_persona === 'asthmatic' ? 'asthmatic' : 'elderly'),
+              exposureMultiplier: fetchedMultiplier,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[DashboardView] Supabase profile fetch notice:', err);
+      }
+    };
+
+    fetchSupabaseProfile();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   // Task 2: Check if Departure Time falls between 06:00 and 08:30 (indices 0 - 10)
   const isMorningInversion = departureTimeIndex >= 0 && departureTimeIndex <= 10;
@@ -397,7 +434,7 @@ export const DashboardView: React.FC = () => {
             Welcome back, {userProfile.name}
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl">
-            AtmosAi is calculating micro-pollutant intake for your <strong className="text-emerald-700 capitalize">{userProfile.persona}</strong> profile ({userProfile.exposureMultiplier}x biological multiplier).
+            AtmosAi is calculating micro-pollutant intake for your <strong className="text-emerald-700 capitalize">{userProfile.persona}</strong> profile ({userProfile.exposureMultiplier}x dynamic multiplier via <span className="capitalize font-semibold text-slate-800">{userProfile.commuteMode}</span>).
           </p>
 
           {/* Detailed Morning Inversion Banner */}

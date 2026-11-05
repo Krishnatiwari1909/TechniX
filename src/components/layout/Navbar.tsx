@@ -1,8 +1,12 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { Wind, Activity, Settings2 } from 'lucide-react';
+import { Wind, Activity, Settings2, User } from 'lucide-react';
 
-export const Navbar: React.FC = () => {
+interface NavbarProps {
+  onOpenAuth?: () => void;
+}
+
+export const Navbar: React.FC<NavbarProps> = ({ onOpenAuth }) => {
   const { userProfile, pm25Level, setShowOnboarding } = useApp();
 
   return (
@@ -62,6 +66,19 @@ export const Navbar: React.FC = () => {
             <Settings2 className="w-3.5 h-3.5 text-slate-600 shrink-0" />
             <span className="hidden sm:inline">Setup</span>
           </button>
+
+          {/* Supabase Auth Trigger */}
+          {onOpenAuth && (
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              className="flex items-center gap-1.5 px-2.5 py-1 md:px-3 md:py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs md:text-sm font-semibold transition-all cursor-pointer"
+              title="Supabase User Account"
+            >
+              <User className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+              <span className="hidden sm:inline font-medium text-xs">Account</span>
+            </button>
+          )}
 
         </div>
 
