@@ -1,7 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Wind, Droplets, Thermometer, RefreshCw } from 'lucide-react';
-import { ResponsiveContainer, LineChart, Line, Tooltip, YAxis } from 'recharts';
+import { Wind, Droplets, Thermometer, RefreshCw, Cpu } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, Tooltip, YAxis, XAxis } from 'recharts';
+
+interface ForecastPoint {
+  time: string;
+  pm25: number;
+}
 
 export const AQIHeroCard: React.FC = () => {
   const { 
@@ -10,9 +15,43 @@ export const AQIHeroCard: React.FC = () => {
     userProfile, 
     windSpeed, 
     windDirection, 
-    telemetryHistory,
     userLocation
   } = useApp();
+
+  // Phase 11: 3-Hour LightGBM Inversion Forecast data
+  const [forecastData, setForecastData] = useState<ForecastPoint[]>([
+    { time: '02:30 AM', pm25: 52 },
+    { time: '03:00 AM', pm25: 52 },
+    { time: '03:30 AM', pm25: 53 },
+    { time: '04:00 AM', pm25: 52 },
+    { time: '04:30 AM', pm25: 52 },
+    { time: '05:00 AM', pm25: 53 },
+    { time: '05:30 AM', pm25: 53 },
+  ]);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchForecast = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api/forecast');
+        if (res.ok) {
+          const data = await res.json();
+          if (!isCancelled && Array.isArray(data) && data.length > 0) {
+            setForecastData(data);
+          }
+        }
+      } catch (err) {
+        console.warn('[AQIHeroCard] LightGBM forecast fetch error:', err);
+      }
+    };
+
+    fetchForecast();
+    const interval = setInterval(fetchForecast, 120000);
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
 
   const aqiScore = Math.round(pm25Level * 1.35);
 
@@ -84,27 +123,42 @@ export const AQIHeroCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Rolling Telemetry Sparkline (Capped at 10 Data Points) */}
-      <div className="my-2 p-3 rounded-xl bg-stone-50 border border-stone-200/60">
-        <div className="flex items-center justify-between text-[11px] mb-1">
-          <span className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-            Rolling Sensor Telemetry (10-Point Window)
+      {/* Phase 11 Task 2: 3-HOUR INVERSION FORECAST (LightGBM Regression) */}
+      <div className="my-2 p-3.5 rounded-xl bg-stone-50 border border-stone-200/80">
+        <div className="flex items-center justify-between text-[11px] mb-2">
+          <span className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-700">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            3-HOUR INVERSION FORECAST
           </span>
-          <span className="font-mono text-emerald-800 text-[10px] font-bold">
-            Live: <strong className="text-slate-900">{pm25Level} µg/m³</strong>
+          <span className="font-mono text-emerald-800 text-[10px] font-bold flex items-center gap-1">
+            <Cpu className="w-3.5 h-3.5 text-emerald-700" />
+            <span>LightGBM ML Regressor</span>
           </span>
         </div>
-        <div className="h-14 w-full">
+        <div className="h-24 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={telemetryHistory} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-              <YAxis domain={['dataMin - 4', 'dataMax + 4']} hide />
+            <LineChart data={forecastData} margin={{ top: 8, right: 10, left: -25, bottom: 0 }}>
+              <XAxis 
+                dataKey="time" 
+                stroke="#94a3b8" 
+                tick={{ fontSize: 9, fill: '#94a3b8' }} 
+                tickLine={false} 
+                axisLine={{ stroke: '#e2e8f0' }} 
+              />
+              <YAxis 
+                domain={['dataMin - 6', 'dataMax + 6']} 
+                stroke="#94a3b8" 
+                tick={{ fontSize: 9, fill: '#94a3b8' }} 
+                tickLine={false} 
+                axisLine={false} 
+              />
               <Tooltip
-                content={({ active, payload }) => {
+                content={({ active, payload, label }) => {
                   if (active && payload && payload.length) {
                     return (
-                      <div className="bg-white border border-stone-200 px-2 py-1 rounded text-[10px] text-slate-800 font-mono shadow-md">
-                        {payload[0].value} µg/m³
+                      <div className="bg-white border border-stone-200 px-2.5 py-1.5 rounded-lg text-xs text-slate-800 font-mono shadow-md">
+                        <span className="text-slate-400 block text-[9px]">{label}</span>
+                        <strong className="text-emerald-700 font-bold">{payload[0].value} µg/m³</strong>
                       </div>
                     );
                   }

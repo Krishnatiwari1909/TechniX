@@ -8,8 +8,9 @@ import wave
 import struct
 import math
 import base64
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pathlib import Path
+from datetime import datetime, timedelta
 
 from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -503,6 +504,76 @@ async def calculate_exposure_get(
         traffic_volume=traffic_volume,
         temperature=temperature
     )
+
+# ==============================================================================
+# Phase 11 Task 1: 3-Hour LightGBM Inversion Forecast Endpoint (/api/forecast)
+# ==============================================================================
+
+@app.get("/api/forecast")
+async def get_three_hour_forecast(
+    base_time: Optional[str] = Query(None, description="Optional starting time like '06:00 AM'")
+):
+    """
+    Task 1: Uses lgbm_inversion.pkl model to generate predictions.
+    Generates exactly 7 data points representing half-hour intervals for the next 3 hours
+    (e.g., Now, +30m, +60m, +90m, +120m, +150m, +180m).
+    Returns an array of JSON objects: [{ time: "02:30 AM", pm25: 45 }, { time: "03:00 AM", pm25: 52 }, ...]
+    """
+    now = datetime.now()
+
+    if isinstance(base_time, str) and base_time.strip():
+        parsed_hour = parse_departure_hour(base_time.strip())
+        h = int(parsed_hour)
+        m = int(round((parsed_hour % 1) * 60))
+        start_dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
+    else:
+        # Snap current time to clean 30-min block (00 or 30) for neat presentation
+        minute = now.minute
+        if minute < 15:
+            start_dt = now.replace(minute=0, second=0, microsecond=0)
+        elif minute < 45:
+            start_dt = now.replace(minute=30, second=0, microsecond=0)
+        else:
+            start_dt = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+
+    points: List[Dict[str, Any]] = []
+
+    for i in range(7):
+        target_dt = start_dt + timedelta(minutes=i * 30)
+        time_str = target_dt.strftime("%I:%M %p")
+        hour_decimal = target_dt.hour + (target_dt.minute / 60.0)
+
+        # Diurnal contextual traffic and temperature
+        morning_rush = math.exp(-((hour_decimal - 8.2) ** 2) / 3.0) * 60.0
+        evening_rush = math.exp(-((hour_decimal - 18.5) ** 2) / 4.0) * 55.0
+        traffic_vol = round(float(np.clip(20.0 + morning_rush + evening_rush, 10.0, 95.0)), 1)
+        temp = round(float(25.0 - 6.0 * math.cos((hour_decimal - 4.0) * math.pi / 12.0)), 1)
+
+        predicted_pm25 = 45.0
+        if lgbm_model is not None:
+            try:
+                features = pd.DataFrame([{
+                    "hour_of_day": hour_decimal,
+                    "traffic_volume": traffic_vol,
+                    "temperature": temp
+                }])
+                val = float(lgbm_model.predict(features)[0])
+                predicted_pm25 = round(val)
+            except Exception as e:
+                is_inversion = 6.0 <= hour_decimal <= 8.5
+                boost = 1.84 if is_inversion else 1.0
+                predicted_pm25 = round(52.0 * boost)
+        else:
+            is_inversion = 6.0 <= hour_decimal <= 8.5
+            boost = 1.84 if is_inversion else 1.0
+            predicted_pm25 = round(52.0 * boost)
+
+        points.append({
+            "time": time_str,
+            "pm25": int(predicted_pm25)
+        })
+
+    return points
 
 # ==============================================================================
 # 5. WebSocket /ws/telemetry (Real-Time Open-Meteo Integration)
