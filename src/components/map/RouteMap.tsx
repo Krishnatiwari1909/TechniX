@@ -615,14 +615,27 @@ export const RouteMap: React.FC = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsNavigating(false)}
-              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition-all shadow-sm cursor-pointer shrink-0 self-start sm:self-auto"
-            >
-              <Square className="w-3.5 h-3.5 fill-current" />
-              <span>End Journey</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&origin=${originCoords[0]},${originCoords[1]}&destination=${destinationCoords[0]},${destinationCoords[1]}&travelmode=bicycling`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
+                title="Launch Google Maps Live GPS Turn-by-Turn Navigation"
+              >
+                <Navigation2 className="w-3.5 h-3.5" />
+                <span>Start Live Navigation</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setIsNavigating(false)}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
+              >
+                <Square className="w-3.5 h-3.5 fill-current" />
+                <span>End Journey</span>
+              </button>
+            </div>
           </div>
 
           <div className="max-h-56 overflow-y-auto space-y-2 pr-1 divide-y divide-stone-100">
@@ -704,16 +717,29 @@ export const RouteMap: React.FC = () => {
               )}
             </div>
 
-            {/* Start Journey Button */}
-            <button
-              type="button"
-              onClick={() => setIsNavigating(true)}
-              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer shrink-0"
-              title="Begin active turn-by-turn clean navigation"
-            >
-              <Play className="w-3.5 h-3.5 fill-current" />
-              <span>Start Journey</span>
-            </button>
+            {/* Navigation Actions */}
+            <div className="flex items-center gap-2 shrink-0">
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&origin=${originCoords[0]},${originCoords[1]}&destination=${destinationCoords[0]},${destinationCoords[1]}&travelmode=bicycling`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs transition-all shadow-2xs cursor-pointer"
+                title="Launch Google Maps Live GPS Turn-by-Turn Navigation"
+              >
+                <Navigation2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden sm:inline">Google Maps</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setIsNavigating(true)}
+                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
+                title="Begin active turn-by-turn clean navigation"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Start Journey</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
