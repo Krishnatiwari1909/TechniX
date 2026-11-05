@@ -71,7 +71,7 @@ export const AlertsView: React.FC = () => {
             Environmental Early-Warnings
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl">
-            LightGBM evaluates atmospheric boundary layer stability and rolling 3-hour PM2.5 trends to warn before severe surges hit.
+            Atmos Neural Engine evaluates atmospheric boundary layer stability and rolling 3-hour PM2.5 trends to warn before severe surges hit.
           </p>
         </div>
 

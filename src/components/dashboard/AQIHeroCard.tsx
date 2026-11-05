@@ -132,7 +132,7 @@ export const AQIHeroCard: React.FC = () => {
           </span>
           <span className="font-mono text-emerald-800 text-[10px] font-bold flex items-center gap-1">
             <Cpu className="w-3.5 h-3.5 text-emerald-700" />
-            <span>LightGBM ML Regressor</span>
+            <span>Atmos Neural Regressor</span>
           </span>
         </div>
         <div className="h-24 w-full">

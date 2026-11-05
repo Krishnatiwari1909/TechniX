@@ -136,7 +136,7 @@ export const TimeShiftSlider: React.FC = () => {
             {exposureMetrics.isMorningInversion && (
               <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-[11px] font-bold animate-in fade-in duration-200">
                 <Cpu className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                <span>LightGBM Inversion ML: Ground particulate surge ({inversionMultiplier.toFixed(2)}x factor)</span>
+                <span>Atmos Inversion Model: Ground particulate surge ({inversionMultiplier.toFixed(2)}x factor)</span>
               </div>
             )}
 

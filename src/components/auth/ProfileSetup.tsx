@@ -355,3 +355,4 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ onComplete }) => {
     </div>
   );
 };
+

@@ -16,7 +16,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: 'm1',
     sender: 'atmos',
-    text: `Hello! I'm Atmos AI, your personal environmental intelligence assistant powered by Google Gemini and live IoT telemetry. I'm actively monitoring particulate sensors and meteorological patterns for your commute. How can I protect your lungs today?`,
+    text: `Hello! I'm AtmosAi, your personal environmental intelligence assistant powered by the Atmos Neural Engine and real-time telemetry. I'm actively monitoring boundary layer inversion and air quality patterns for your commute. How can I protect your lungs today?`,
     timestamp: 'Just now',
     quickActions: [
       '🏃 Is it safe to run outdoors now?',
@@ -139,7 +139,7 @@ export const AskAtmosFAB: React.FC = () => {
         sender: 'atmos',
         text: data.reply || "I've analyzed the meteorological telemetry. Stay on the green corridor to preserve lung health.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        badge: data.provider || 'Gemini 1.5'
+        badge: 'Atmos Neural Engine'
       };
 
       setMessages(prev => [...prev, aiMsg]);
@@ -195,7 +195,7 @@ export const AskAtmosFAB: React.FC = () => {
                 Ask Atmos
               </span>
               <span className="hidden md:inline text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-emerald-800 border border-emerald-500/40 text-emerald-100">
-                Gemini
+                Neural AI
               </span>
             </div>
           </button>
@@ -319,7 +319,7 @@ export const AskAtmosFAB: React.FC = () => {
             {isTyping && (
               <div className="flex items-center gap-2 text-xs text-slate-500 p-2 bg-white border border-stone-200 rounded-xl w-fit shadow-xs">
                 <Bot className="w-4 h-4 text-emerald-600 animate-spin" />
-                <span className="animate-pulse">Atmos Gemini is generating answer...</span>
+                <span className="animate-pulse">AtmosAi is calculating advisory...</span>
               </div>
             )}
 
@@ -334,7 +334,7 @@ export const AskAtmosFAB: React.FC = () => {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask Gemini about air quality, routing, gear..."
+                placeholder="Ask AtmosAi about air quality, routing, gear..."
                 className="w-full pl-3.5 pr-11 py-2.5 rounded-xl bg-white border border-stone-200 text-slate-800 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-emerald-500 shadow-2xs"
               />
               <button

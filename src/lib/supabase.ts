@@ -61,3 +61,4 @@ export function calculateDynamicMultiplier(
 
   return Math.round(base * 100) / 100;
 }
+

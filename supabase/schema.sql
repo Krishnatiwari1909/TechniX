@@ -68,3 +68,4 @@ create trigger on_auth_user_created
 
 -- Optional: Comments for PostgREST schema inspection
 comment on table public.user_profiles is 'Stores demographic and mobility profiles for AtmosAi pollution exposure calculations.';
+

@@ -416,7 +416,7 @@ export const RouteMap: React.FC = () => {
                 Plan Clean Air Route
               </h3>
               <p className="text-[11px] text-slate-500">
-                Custom origin &amp; destination with Mapbox geocoding &amp; dynamic AQI routing
+                Custom origin &amp; destination with dynamic microclimate AQI routing
               </p>
             </div>
           </div>
@@ -425,15 +425,9 @@ export const RouteMap: React.FC = () => {
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-slate-600 font-semibold">
               Max 1.3x Detour Cap
             </span>
-            {import.meta.env.VITE_MAPBOX_API_KEY ? (
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold">
-                Mapbox Live
-              </span>
-            ) : (
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-slate-600">
-                Smart Engine
-              </span>
-            )}
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold">
+              Live GPS Grid
+            </span>
           </div>
         </div>
 
@@ -858,7 +852,7 @@ export const RouteMap: React.FC = () => {
               {(inversionMultiplier > 1.05 || isMorningInversion) && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-amber-800 text-[10px] font-bold">
                   <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
-                  {inversionMultiplier.toFixed(2)}x Inversion Surge {isMlPowered ? '(LightGBM ML)' : 'Active'}
+                  {inversionMultiplier.toFixed(2)}x Inversion Surge {isMlPowered ? '(Atmos ML)' : 'Active'}
                 </span>
               )}
             </div>

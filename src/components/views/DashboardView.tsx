@@ -461,7 +461,7 @@ export const DashboardView: React.FC = () => {
             {isLoadingBriefing ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>Consulting Gemini...</span>
+                <span>Synthesizing AI Briefing...</span>
               </>
             ) : (
               <>
@@ -544,7 +544,7 @@ export const DashboardView: React.FC = () => {
                     Morning Commute Safety Briefing
                   </h3>
                   <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
-                    Google Gemini 1.5
+                    Atmos Neural Engine
                   </span>
                   <span className="text-[10px] text-slate-500 font-medium">
                     Destination: <strong className="text-slate-800">{userProfile.destination || 'Detected Location'}</strong>

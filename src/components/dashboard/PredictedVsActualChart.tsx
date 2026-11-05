@@ -27,7 +27,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
       <div className="bg-white p-3.5 rounded-xl border border-stone-200 shadow-xl text-xs space-y-1.5">
         <div className="font-semibold text-slate-700 border-b border-stone-100 pb-1 flex items-center justify-between gap-4">
           <span>Time: {label}</span>
-          <span className="text-[10px] text-emerald-700 font-mono">AWS Bedrock LightGBM</span>
+          <span className="text-[10px] text-emerald-700 font-mono">Atmos Neural Engine</span>
         </div>
         {actual !== undefined && actual !== null ? (
           <div className="flex items-center justify-between gap-3 text-rose-600 font-medium">
@@ -78,7 +78,7 @@ export const PredictedVsActualChart: React.FC = () => {
             </h3>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Rolling 16-hour evaluation from IoT telemetry & LightGBM machine learning
+            Rolling 16-hour evaluation from sensory telemetry &amp; Atmos Neural ML
           </p>
         </div>
 
@@ -90,7 +90,7 @@ export const PredictedVsActualChart: React.FC = () => {
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800">
             <span className="w-3 h-0.5 border-t-2 border-dashed border-emerald-600" />
-            <span className="font-medium">Predicted (LightGBM)</span>
+            <span className="font-medium">Predicted (Atmos ML)</span>
           </div>
         </div>
       </div>
