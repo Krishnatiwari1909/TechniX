@@ -33,8 +33,14 @@ export const DashboardView: React.FC = () => {
     setTelemetryHistory,
     departureTimeIndex,
     userLocation,
-    isLocating
+    isLocating,
+    isSimulating
   } = useApp();
+
+  const isSimulatingRef = useRef(isSimulating);
+  useEffect(() => {
+    isSimulatingRef.current = isSimulating;
+  }, [isSimulating]);
 
   // Task 5: Supabase logged-in user profile fetch on mount
   useEffect(() => {
@@ -153,6 +159,7 @@ export const DashboardView: React.FC = () => {
 
         ws.onmessage = (event) => {
           if (isDisposed) return;
+          if (isSimulatingRef.current) return;
           try {
             const data = JSON.parse(event.data);
             if (typeof data.pm25 === 'number') {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Wind, Droplets, Thermometer, RefreshCw, Cpu } from 'lucide-react';
+import { Wind, Droplets, Thermometer, RefreshCw, Cpu, Radio } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, Tooltip, YAxis, XAxis } from 'recharts';
 
 interface ForecastPoint {
@@ -15,7 +15,9 @@ export const AQIHeroCard: React.FC = () => {
     userProfile, 
     windSpeed, 
     windDirection, 
-    userLocation
+    userLocation,
+    isSimulating,
+    setIsSimulating
   } = useApp();
 
   // Phase 11: 3-Hour LightGBM Inversion Forecast data
@@ -217,7 +219,10 @@ export const AQIHeroCard: React.FC = () => {
         <div className="grid grid-cols-4 gap-2">
           <button
             type="button"
-            onClick={() => setPm25Level(22)}
+            onClick={() => {
+              setIsSimulating(true);
+              setPm25Level(22);
+            }}
             className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
               pm25Level <= 35
                 ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
@@ -228,7 +233,10 @@ export const AQIHeroCard: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setPm25Level(58)}
+            onClick={() => {
+              setIsSimulating(true);
+              setPm25Level(58);
+            }}
             className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
               pm25Level > 35 && pm25Level <= 75
                 ? 'bg-amber-500 border-amber-500 text-white shadow-sm'
@@ -239,7 +247,10 @@ export const AQIHeroCard: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setPm25Level(128)}
+            onClick={() => {
+              setIsSimulating(true);
+              setPm25Level(128);
+            }}
             className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
               pm25Level > 75 && pm25Level <= 160
                 ? 'bg-rose-500 border-rose-500 text-white shadow-sm'
@@ -250,7 +261,10 @@ export const AQIHeroCard: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setPm25Level(210)}
+            onClick={() => {
+              setIsSimulating(true);
+              setPm25Level(210);
+            }}
             className={`py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
               pm25Level > 160
                 ? 'bg-red-700 border-red-700 text-white shadow-sm'
@@ -260,6 +274,23 @@ export const AQIHeroCard: React.FC = () => {
             Hazard (210)
           </button>
         </div>
+
+        {isSimulating && (
+          <div className="mt-2.5 flex items-center justify-between p-2 rounded-xl bg-amber-50 border border-amber-200 animate-in fade-in duration-200">
+            <span className="text-[11px] text-amber-900 font-medium flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+              <span>Demo simulation override active</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsSimulating(false)}
+              className="py-1 px-3 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Radio className="w-3.5 h-3.5 text-emerald-200 animate-pulse" />
+              <span>Resume Live Telemetry</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

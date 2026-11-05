@@ -27,6 +27,8 @@ interface AppContextType {
   userLocation: { lat: number; lng: number; name?: string; locality?: string } | null;
   setUserLocation: (loc: { lat: number; lng: number; name?: string; locality?: string } | null) => void;
   isLocating: boolean;
+  isSimulating: boolean;
+  setIsSimulating: (simulating: boolean) => void;
 }
 
 export const BENGALURU_FALLBACK_COORDS = {
@@ -90,6 +92,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Task 2: Auto-Geolocation with guaranteed Bengaluru [12.9716, 77.5946] Fallback
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; name?: string; locality?: string } | null>(BENGALURU_FALLBACK_COORDS);
   const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [isSimulating, setIsSimulating] = useState<boolean>(false);
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
@@ -244,7 +247,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedRouteId,
         userLocation,
         setUserLocation,
-        isLocating
+        isLocating,
+        isSimulating,
+        setIsSimulating
       }}
     >
       {children}
