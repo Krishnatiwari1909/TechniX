@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { 
@@ -64,18 +64,7 @@ const getCardinalDirection = (deg: number): string => {
   return directions[index < 0 ? index + 16 : index];
 };
 
-const MapBoundsAdjuster: React.FC<{ start: [number, number]; end: [number, number] }> = ({ start, end }) => {
-  const map = useMap();
-  useEffect(() => {
-    try {
-      const bounds = L.latLngBounds([start, end]);
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
-    } catch {
-      map.flyTo(start, 13, { duration: 1.2 });
-    }
-  }, [start, end, map]);
-  return null;
-};
+
 
 const createCustomPin = (label: string, color: string, glowColor: string) => {
   return L.divIcon({
@@ -154,7 +143,10 @@ export const RouteMap: React.FC = () => {
 
   // Task 3: Selective Route Rendering state
   const [activeRouteType, setActiveRouteType] = useState<RouteType>('healthiest');
-  
+
+  // Phase 14 Task 1: Route Coordinates state in [latitude, longitude] format for Leaflet
+  const [routeCoordinates, setRouteCoordinates] = useState<[number, number][]>([]);
+
   // Task 4: Navigation Mode state
   const [isNavigating, setIsNavigating] = useState(false);
 
@@ -220,12 +212,53 @@ export const RouteMap: React.FC = () => {
     }
   }, [userLocation]);
 
+  // Phase 14 Task 1: Keep routeCoordinates in sync when activeRouteType or routingResult changes
+  useEffect(() => {
+    if (routingResult) {
+      const activeData = activeRouteType === 'healthiest' && routingResult.alternativeRoute
+        ? routingResult.alternativeRoute
+        : routingResult.shortestRoute;
+
+      if (activeData?.coordinates && activeData.coordinates.length > 0) {
+        // Mapbox Directions returns [longitude, latitude], reverse tuple to [latitude, longitude] for Leaflet
+        const flipped: [number, number][] = activeData.coordinates.map(([lng, lat]) => [lat, lng]);
+        setRouteCoordinates(flipped);
+      }
+    }
+  }, [activeRouteType, routingResult]);
+
+  // Phase 14 Task 2: Inner component that uses useMap() to auto-zoom camera on routeCoordinates
+  const RouteCameraAutoFitter: React.FC = () => {
+    const map = useMap();
+
+    useEffect(() => {
+      if (routeCoordinates && routeCoordinates.length > 0) {
+        try {
+          map.fitBounds(routeCoordinates, { padding: [50, 50] });
+        } catch (err) {
+          console.warn('[RouteMap] Camera fitBounds error:', err);
+        }
+      } else if (originCoords && destinationCoords) {
+        try {
+          const bounds = L.latLngBounds([originCoords, destinationCoords]);
+          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+        } catch {
+          map.flyTo(originCoords, 13, { duration: 1.2 });
+        }
+      }
+    }, [map, routeCoordinates]);
+
+    return null;
+  };
+
   // Core Routing Calculation with try/catch/finally
   const calculateRoutesWithCoords = useCallback(async (
     fromCoords: [number, number],
     toCoords: [number, number],
     mode: TransportMode
   ) => {
+    // Phase 14 Task 1: Explicitly clear existing routeCoordinates first
+    setRouteCoordinates([]);
     setIsRoutingLoading(true);
     let autoResetTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -283,6 +316,15 @@ export const RouteMap: React.FC = () => {
       } else {
         setActiveRouteType('healthiest');
       }
+
+      // Phase 14 Task 1: Reverse [longitude, latitude] to [latitude, longitude] for Leaflet
+      const chosen = (decision.isAlreadySafe || !decision.alternativeRoute)
+        ? decision.shortestRoute
+        : (decision.alternativeRoute || decision.shortestRoute);
+      if (chosen?.coordinates) {
+        const flippedCoords: [number, number][] = chosen.coordinates.map(([lng, lat]) => [lat, lng]);
+        setRouteCoordinates(flippedCoords);
+      }
     } catch (err) {
       console.warn('[RouteMap] Route calculation error:', err);
     } finally {
@@ -299,6 +341,8 @@ export const RouteMap: React.FC = () => {
   // Phase 8c Task 2: Dual Geocoding on "Calculate Route"
   const handleCalculateRoute = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    // Phase 14 Task 1: Explicitly clear routeCoordinates on calculation start
+    setRouteCoordinates([]);
     setIsRoutingLoading(true);
 
     try {
@@ -797,7 +841,8 @@ export const RouteMap: React.FC = () => {
           className="w-full h-full"
           style={{ background: '#f8fafc' }}
         >
-          <MapBoundsAdjuster start={originCoords} end={destinationCoords} />
+          {/* Phase 14 Task 2: Auto-Zoom the Camera (fitBounds on routeCoordinates) */}
+          <RouteCameraAutoFitter />
 
           {/* OpenStreetMap Free Tiles */}
           <TileLayer
@@ -806,14 +851,13 @@ export const RouteMap: React.FC = () => {
             maxZoom={19}
           />
 
-          {/* Selective Route Rendering: active selectedRoute polyline */}
-          {activeRoute && (
-            <GeoJSON
-              key={`active-core-${activeRoute.id}-${originCoords.join(',')}-${destinationCoords.join(',')}`}
-              data={activeRoute.geojson}
-              style={{
-                color: activeRoute.color,
-                weight: 6.5,
+          {/* Phase 14 Task 1: Leaflet Polyline using reversed [latitude, longitude] routeCoordinates */}
+          {routeCoordinates.length > 0 && (
+            <Polyline
+              positions={routeCoordinates}
+              pathOptions={{
+                color: activeRoute?.color || '#059669',
+                weight: 6,
                 opacity: 0.95,
                 lineCap: 'round',
                 lineJoin: 'round'
