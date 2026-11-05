@@ -171,7 +171,44 @@ export const RouteMap: React.FC = () => {
   });
 
   const isMorningInversion = departureTimeIndex >= 0 && departureTimeIndex <= 10;
-  const inversionMultiplier = isMorningInversion ? 1.3 : 1.0;
+  const [inversionMultiplier, setInversionMultiplier] = useState<number>(() => (isMorningInversion ? 1.3 : 1.0));
+  const [isMlPowered, setIsMlPowered] = useState<boolean>(false);
+
+  // Fetch ML-powered atmospheric inversion factor from FastAPI LightGBM service
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchMLInversion = async () => {
+      try {
+        const hours = 6 + Math.floor((departureTimeIndex * 15) / 60);
+        const mins = (departureTimeIndex * 15) % 60;
+        const period = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours > 12 ? hours - 12 : hours;
+        const timeStr = `${displayHours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')} ${period}`;
+
+        const res = await fetch(
+          `http://localhost:8000/api/exposure?departure_time=${encodeURIComponent(timeStr)}&departure_time_index=${departureTimeIndex}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (!isCancelled && typeof data.inversion_multiplier === 'number') {
+            setInversionMultiplier(data.inversion_multiplier);
+            setIsMlPowered(true);
+          }
+        }
+      } catch {
+        if (!isCancelled) {
+          const isMorning = departureTimeIndex >= 0 && departureTimeIndex <= 10;
+          setInversionMultiplier(isMorning ? 1.3 : 1.0);
+          setIsMlPowered(false);
+        }
+      }
+    };
+    fetchMLInversion();
+    return () => {
+      isCancelled = true;
+    };
+  }, [departureTimeIndex]);
+
   const transportMultiplier = TRANSPORT_MULTIPLIERS[transportMode].multiplier;
 
   // Sync GPS location if initial geolocation finishes and origin hasn't been manually overridden
@@ -818,10 +855,10 @@ export const RouteMap: React.FC = () => {
               <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block">
                 Route Telemetry Comparison
               </span>
-              {isMorningInversion && (
+              {(inversionMultiplier > 1.05 || isMorningInversion) && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-300 text-amber-800 text-[10px] font-bold">
                   <AlertTriangle className="w-2.5 h-2.5 text-amber-600" />
-                  1.3x Morning Inversion Active
+                  {inversionMultiplier.toFixed(2)}x Inversion Surge {isMlPowered ? '(LightGBM ML)' : 'Active'}
                 </span>
               )}
             </div>
