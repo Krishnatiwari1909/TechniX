@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Wind, Mail, Lock, User, ArrowRight, Sparkles, AlertCircle, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 interface AuthProps {
@@ -28,20 +27,23 @@ export const Auth: React.FC<AuthProps> = ({
     setLoading(true);
 
     const effectiveName = fullName.trim() || email.split('@')[0] || 'Commuter';
-    const authPayload = {
-      name: effectiveName,
-      email: email.trim() || 'demo@atmosai.dev',
-      isLoggedIn: true
-    };
+    const effectiveEmail = email.trim();
 
-    // Phase 21 Task 1: Mock Authentication via localStorage
-    localStorage.setItem('atmos_auth', JSON.stringify(authPayload));
-    localStorage.setItem('atmosai_authenticated', 'true');
-    localStorage.setItem('atmosai_user_name', effectiveName);
+    // Phase 24 Task 2: When user enters Name and Email and clicks "Sign Up & Setup Profile"
+    localStorage.setItem('atmos_auth', JSON.stringify({ name: fullName.trim() || effectiveName, email: effectiveEmail }));
 
     setLoading(false);
-    // Instantly route to Setup Wizard component
-    onSignUpSuccess();
+    if (isSignUp) {
+      // Instantly redirect to Setup Wizard
+      onSignUpSuccess();
+    } else {
+      const hasProfile = !!localStorage.getItem('atmos_profile');
+      if (hasProfile) {
+        onLoginSuccess();
+      } else {
+        onSignUpSuccess();
+      }
+    }
   };
 
   return (
@@ -213,7 +215,7 @@ export const Auth: React.FC<AuthProps> = ({
         {/* Security badge */}
         <div className="mt-4 flex items-center justify-center gap-1.5 text-[10px] text-slate-400">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Encrypted with Supabase Row-Level Security</span>
+          <span>Protected with AtmosAi Local Shield</span>
         </div>
 
       </div>

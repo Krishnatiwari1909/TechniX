@@ -43,38 +43,76 @@ export const DashboardView: React.FC = () => {
     isSimulatingRef.current = isSimulating;
   }, [isSimulating]);
 
-  // Phase 21 Task 3: Dashboard Hydration from localStorage 'atmos_auth' and 'atmos_profile'
+  const formatCommuteModeBadge = (mode?: string | null): string => {
+    if (!mode) return 'Bicycle';
+    const m = mode.toLowerCase().trim();
+    if (m === 'two-wheeler' || m === 'two wheeler' || m === 'motorbike' || m === 'motorcycle') return 'Two-Wheeler';
+    if (m === 'transit' || m === 'public transit' || m === 'bus' || m === 'metro') return 'Public Transit';
+    if (m === 'car') return 'Car';
+    if (m === 'walking' || m === 'walk') return 'Walking';
+    if (m === 'bicycle' || m === 'bike') return 'Bicycle';
+    return mode.charAt(0).toUpperCase() + mode.slice(1);
+  };
+
+  // Phase 24 Task 4: Read atmos_auth for user's actual registered name
+  const [displayedName, setDisplayedName] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('atmos_auth');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.name) return parsed.name;
+      }
+    } catch {}
+    return userProfile.name || 'Commuter';
+  });
+
+  // Phase 24 Task 4: Read atmos_profile for active commute mode badge
+  const [commuteBadge, setCommuteBadge] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem('atmos_profile');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.commuteMode) return formatCommuteModeBadge(parsed.commuteMode);
+      }
+    } catch {}
+    return formatCommuteModeBadge(userProfile.commuteMode);
+  });
+
+  // Phase 24 Task 4: Dashboard Hydration from localStorage 'atmos_auth' and 'atmos_profile'
   useEffect(() => {
     let isCancelled = false;
     const hydrateDashboardFromStorage = () => {
-      let resolvedName = userProfile.name;
-      let resolvedMode: CommuteMode = userProfile.commuteMode;
+      let resolvedName = userProfile.name || 'Commuter';
+      let resolvedMode: CommuteMode = userProfile.commuteMode || 'bicycle';
       let resolvedSensitivities: string[] = userProfile.sensitivities || ['Asthma'];
-      let resolvedPersona = userProfile.persona;
+      let resolvedPersona = userProfile.persona || 'commuter';
 
-      // 1. Read 'atmos_auth' for user's actual registered name
+      // 1. Read atmos_auth to display: Welcome back, {name} in the header
       try {
         const rawAuth = localStorage.getItem('atmos_auth');
         if (rawAuth) {
           const authObj = JSON.parse(rawAuth);
           if (authObj.name) {
             resolvedName = authObj.name;
+            setDisplayedName(authObj.name);
           }
         }
       } catch (e) {
         console.warn('[DashboardView] Error reading atmos_auth:', e);
       }
 
-      // 2. Read 'atmos_profile' (with fallback to 'atmosai_user_profile_v2')
+      // 2. Read atmos_profile to set active Commute Mode badge
       try {
         const rawProfile = localStorage.getItem('atmos_profile') || localStorage.getItem('atmosai_user_profile_v2');
         if (rawProfile) {
           const profileObj = JSON.parse(rawProfile);
           if (profileObj.name && (!resolvedName || resolvedName === 'Alex Chen' || resolvedName === 'Commuter')) {
             resolvedName = profileObj.name;
+            setDisplayedName(profileObj.name);
           }
           if (profileObj.commuteMode) {
             resolvedMode = profileObj.commuteMode as CommuteMode;
+            setCommuteBadge(formatCommuteModeBadge(profileObj.commuteMode));
           }
           if (profileObj.sensitivities) {
             resolvedSensitivities = profileObj.sensitivities;
@@ -87,8 +125,40 @@ export const DashboardView: React.FC = () => {
         console.warn('[DashboardView] Error reading atmos_profile:', e);
       }
 
-      // 3. Apply exact Two-Wheeler / Asthma exposure multipliers
-      const calculatedMult = calculateDynamicMultiplier(resolvedSensitivities, resolvedMode);
+      // 3. Dynamic multiplier calculation:
+      // Base: 1.0x (Car), 1.5x (Two-Wheeler/Public Transit), 1.8x (Bicycle), 2.0x (Walking).
+      // Penalty: Add +0.5x if Asthma or Cardiovascular is selected.
+      let base = 1.0;
+      const m = (resolvedMode || '').toLowerCase().trim();
+      if (m === 'car') {
+        base = 1.0;
+      } else if (
+        m === 'two-wheeler' || 
+        m === 'two wheeler' || 
+        m === 'motorbike' || 
+        m === 'motorcycle' || 
+        m === 'transit' || 
+        m === 'public transit' || 
+        m === 'bus' || 
+        m === 'metro'
+      ) {
+        base = 1.5;
+      } else if (m === 'bicycle' || m === 'bike') {
+        base = 1.8;
+      } else if (m === 'walking' || m === 'walk') {
+        base = 2.0;
+      }
+
+      const hasPenalty = resolvedSensitivities.some(s => {
+        const lower = s.toLowerCase();
+        return lower.includes('asthma') || lower.includes('cardio');
+      });
+
+      if (hasPenalty) {
+        base += 0.5;
+      }
+
+      const calculatedMult = Math.round(base * 10) / 10;
 
       if (!isCancelled) {
         updateProfile({
@@ -103,8 +173,10 @@ export const DashboardView: React.FC = () => {
     };
 
     hydrateDashboardFromStorage();
+    window.addEventListener('storage', hydrateDashboardFromStorage);
     return () => {
       isCancelled = true;
+      window.removeEventListener('storage', hydrateDashboardFromStorage);
     };
   }, []);
 
@@ -450,7 +522,7 @@ export const DashboardView: React.FC = () => {
             </div>
             <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-              <span>Commuter Mode: {userProfile.commuteMode === 'two-wheeler' ? 'Two-Wheeler' : userProfile.commuteMode ? userProfile.commuteMode.charAt(0).toUpperCase() + userProfile.commuteMode.slice(1) : 'Bicycle'}</span>
+              <span>Commuter Mode: {commuteBadge}</span>
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-stone-100 text-stone-700 border border-stone-200">
@@ -477,10 +549,10 @@ export const DashboardView: React.FC = () => {
             )}
           </div>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5">
-            Welcome back, {userProfile.name || 'Commuter'}
+            Welcome back, {displayedName}
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl">
-            AtmosAi is calculating micro-pollutant intake for your <strong className="text-emerald-700 capitalize">{userProfile.persona}</strong> profile ({userProfile.exposureMultiplier}x dynamic multiplier via <span className="capitalize font-semibold text-slate-800">{userProfile.commuteMode === 'two-wheeler' ? 'Two-Wheeler' : userProfile.commuteMode}</span>).
+            AtmosAi is calculating micro-pollutant intake for your <strong className="text-emerald-700 capitalize">{userProfile.persona}</strong> profile ({userProfile.exposureMultiplier}x dynamic multiplier via <span className="capitalize font-semibold text-slate-800">{commuteBadge}</span>).
           </p>
 
           {/* Detailed Morning Inversion Banner */}

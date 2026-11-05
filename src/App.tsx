@@ -12,7 +12,6 @@ import { AskAtmosFAB } from './components/chat/AskAtmosFAB';
 import { SetupWizard } from './components/onboarding/SetupWizard';
 import { Auth } from './components/auth/Auth';
 import { ProfileSetup } from './components/auth/ProfileSetup';
-import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 interface MainLayoutProps {
   onOpenAuth: () => void;
@@ -68,71 +67,45 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onOpenAuth, onOpenSetup }) => {
   );
 };
 
+const computeCurrentScreen = (): 'auth' | 'setup' | 'app' => {
+  try {
+    const hasAuth = !!localStorage.getItem('atmos_auth');
+    const hasProfile = !!localStorage.getItem('atmos_profile');
+    if (!hasAuth) return 'auth';
+    if (!hasProfile) return 'setup';
+    return 'app';
+  } catch {
+    return 'auth';
+  }
+};
+
 export const App: React.FC = () => {
-  const [authScreen, setAuthScreen] = useState<'auth' | 'setup' | 'app'>(() => {
-    // Phase 21 Task 1: Check localStorage for mock auth state
-    try {
-      const auth = JSON.parse(localStorage.getItem('atmos_auth') || '{}');
-      if (auth.isLoggedIn) return 'app';
-    } catch {}
-    const isAuthenticated = localStorage.getItem('atmosai_authenticated') === 'true';
-    return isAuthenticated ? 'app' : 'auth';
-  });
+  // Phase 24 Task 1: Conditional rendering based on localStorage ('atmos_auth' & 'atmos_profile')
+  const [authScreen, setAuthScreen] = useState<'auth' | 'setup' | 'app'>(computeCurrentScreen);
 
-  // Check Supabase session on startup
   useEffect(() => {
-    if (isSupabaseConfigured()) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          localStorage.setItem('atmosai_authenticated', 'true');
-          setAuthScreen(prev => (prev === 'setup' ? 'setup' : 'app'));
-        } else {
-          localStorage.removeItem('atmosai_authenticated');
-          setAuthScreen('auth');
-        }
-      });
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        if (session) {
-          localStorage.setItem('atmosai_authenticated', 'true');
-          if (event === 'SIGNED_IN') {
-            setAuthScreen(prev => (prev === 'setup' ? 'setup' : 'app'));
-          }
-        } else if (event === 'SIGNED_OUT') {
-          localStorage.removeItem('atmosai_authenticated');
-          setAuthScreen('auth');
-        }
-      });
-
-      return () => {
-        subscription.unsubscribe();
-      };
-    } else {
-      const isAuthenticated = localStorage.getItem('atmosai_authenticated') === 'true';
-      if (!isAuthenticated) {
-        setAuthScreen('auth');
-      }
-    }
+    const syncRoute = () => {
+      setAuthScreen(computeCurrentScreen());
+    };
+    window.addEventListener('storage', syncRoute);
+    return () => window.removeEventListener('storage', syncRoute);
   }, []);
 
   const handleLoginSuccess = () => {
-    localStorage.setItem('atmosai_authenticated', 'true');
-    setAuthScreen('app');
+    setAuthScreen(computeCurrentScreen());
   };
 
   const handleSignUpSuccess = () => {
-    localStorage.setItem('atmosai_authenticated', 'true');
     setAuthScreen('setup');
   };
 
   const handleSetupComplete = () => {
-    localStorage.setItem('atmosai_authenticated', 'true');
     setAuthScreen('app');
   };
 
   const handleGuestContinue = () => {
-    localStorage.setItem('atmosai_authenticated', 'true');
-    setAuthScreen('app');
+    localStorage.setItem('atmos_auth', JSON.stringify({ name: 'Guest Explorer', email: 'guest@atmosai.dev' }));
+    setAuthScreen(computeCurrentScreen());
   };
 
   if (authScreen === 'auth') {

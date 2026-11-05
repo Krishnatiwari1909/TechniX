@@ -191,20 +191,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  // Phase 19 Task 3: Dynamic math multiplier:
-  // Base: 1.0x (Car), 1.5x (Two-Wheeler), 1.8x (Bicycle), 2.0x (Walking).
+  // Phase 24 Task 4: Dynamic math multiplier:
+  // Base: 1.0x (Car), 1.5x (Two-Wheeler/Public Transit), 1.8x (Bicycle), 2.0x (Walking).
   // Penalty: +0.5x if Asthma or Cardiovascular is checked.
   const calculateMultiplier = (_persona: PersonaType, mode: CommuteMode, sensitivities: string[]): number => {
     let base = 1.0;
-    const m = (mode || '').toLowerCase();
+    const m = (mode || '').toLowerCase().trim();
     if (m === 'walking' || m === 'walk') {
       base = 2.0;
     } else if (m === 'bicycle' || m === 'bike') {
       base = 1.8;
-    } else if (m === 'two-wheeler' || m === 'motorbike' || m === 'motorcycle') {
+    } else if (
+      m === 'two-wheeler' || 
+      m === 'two wheeler' || 
+      m === 'motorbike' || 
+      m === 'motorcycle' || 
+      m === 'transit' || 
+      m === 'public transit' || 
+      m === 'bus'
+    ) {
       base = 1.5;
-    } else if (m === 'transit' || m === 'bus') {
-      base = 1.2;
     } else if (m === 'car') {
       base = 1.0;
     }

@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PersonaType, CommuteMode } from '../../types';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { 
   Activity, 
   Baby, 
@@ -36,24 +35,6 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
     return localStorage.getItem('atmosai_user_name') || userProfile.name || 'Commuter';
   });
   const [selectedPersona, setSelectedPersona] = useState<PersonaType>(userProfile.persona || 'runner');
-
-  useEffect(() => {
-    const fetchUserMeta = async () => {
-      if (!isSupabaseConfigured()) return;
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const metaName = user.user_metadata?.full_name;
-          if (metaName) {
-            setUserName(metaName);
-          }
-        }
-      } catch (err) {
-        console.warn('Could not read user meta in wizard:', err);
-      }
-    };
-    fetchUserMeta();
-  }, []);
   const [emergencyName, setEmergencyName] = useState<string>(userProfile.emergencyName || 'Partner / Family');
   const [emergencyContact, setEmergencyContact] = useState<string>(userProfile.emergencyContact || '+1 (555) 382-9912');
   const [commuteTime, setCommuteTime] = useState<string>(userProfile.commuteTime || '08:15');
@@ -66,30 +47,39 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
   const currentMultiplier = calculateMultiplier(selectedPersona, commuteMode, sensitivities);
 
   const toggleSensitivity = (item: string) => {
-    setSensitivities(prev => 
-      prev.includes(item) ? prev.filter(s => s !== item) : [...prev, item]
-    );
+    if (item === 'None') {
+      setSensitivities(['None']);
+      return;
+    }
+    setSensitivities(prev => {
+      const clean = prev.filter(s => s !== 'None');
+      return clean.includes(item) ? clean.filter(s => s !== item) : [...clean, item];
+    });
   };
 
   const handleSaveAndRedirect = () => {
-    // Phase 21 Task 2: Mock Database in localStorage
+    // Phase 24 Task 3: Execute localStorage.setItem('atmos_profile', JSON.stringify({ commuteMode, sensitivities }))
     const wizardData = {
-      name: userName || userProfile.name || 'Commuter',
-      persona: selectedPersona,
       commuteMode,
       sensitivities,
+      name: userName || userProfile.name || 'Commuter',
+      persona: selectedPersona,
+      destination,
       emergencyName,
       emergencyContact,
       commuteTime,
       returnTime,
-      destination,
       exposureMultiplier: currentMultiplier,
       onboardingCompleted: true
     };
 
     updateProfile(wizardData);
     try {
-      localStorage.setItem('atmos_profile', JSON.stringify(wizardData));
+      localStorage.setItem('atmos_profile', JSON.stringify({
+        commuteMode,
+        sensitivities,
+        ...wizardData
+      }));
       localStorage.setItem('atmosai_user_profile_v2', JSON.stringify(wizardData));
       localStorage.setItem('atmosai_visited', 'true');
       localStorage.setItem('atmosai_authenticated', 'true');
@@ -335,18 +325,26 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
                 Primary Commute Mode
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {(['two-wheeler', 'bicycle', 'walking', 'transit', 'car'] as CommuteMode[]).map((mode) => (
+                {(
+                  [
+                    { id: 'car', label: 'Car' },
+                    { id: 'transit', label: 'Public Transit' },
+                    { id: 'walking', label: 'Walking' },
+                    { id: 'bicycle', label: 'Bicycle' },
+                    { id: 'two-wheeler', label: 'Two-Wheeler' }
+                  ] as { id: CommuteMode; label: string }[]
+                ).map(({ id, label }) => (
                   <button
-                    key={mode}
+                    key={id}
                     type="button"
-                    onClick={() => setCommuteMode(mode)}
-                    className={`py-2 px-3 rounded-xl border text-xs font-medium capitalize transition-all cursor-pointer ${
-                      commuteMode === mode
+                    onClick={() => setCommuteMode(id)}
+                    className={`py-2 px-3 rounded-xl border text-xs font-medium transition-all cursor-pointer ${
+                      commuteMode === id
                         ? 'border-emerald-600 bg-emerald-50 text-emerald-800 font-bold shadow-xs'
                         : 'border-stone-200 bg-stone-50 text-slate-600 hover:bg-stone-100'
                     }`}
                   >
-                    {mode === 'two-wheeler' ? 'Two-Wheeler' : mode === 'transit' ? 'Public Transit' : mode}
+                    {label}
                   </button>
                 ))}
               </div>

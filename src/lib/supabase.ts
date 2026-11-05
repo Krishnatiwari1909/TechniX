@@ -31,8 +31,8 @@ export interface UserProfileRow {
 }
 
 /**
- * Helper to calculate personalized biological multiplier based on fetched Supabase profile
- * Phase 19 Task 3: Base is 1.0x (Car), 1.5x (Two-Wheeler), 1.8x (Bicycle), or 2.0x (Walking).
+ * Helper to calculate personalized biological multiplier based on fetched profile
+ * Phase 24: Base is 1.0x (Car), 1.5x (Two-Wheeler/Public Transit), 1.8x (Bicycle), or 2.0x (Walking).
  * If "+ Asthma" or "+ Cardiovascular", add 0.5x penalty.
  */
 export function calculateDynamicMultiplier(
@@ -40,18 +40,25 @@ export function calculateDynamicMultiplier(
   transportMode: string | null | undefined
 ): number {
   let base = 1.0;
-  const mode = (transportMode || '').toLowerCase();
+  const mode = (transportMode || '').toLowerCase().trim();
   
   if (mode === 'car') {
     base = 1.0;
-  } else if (mode === 'two-wheeler' || mode === 'motorbike' || mode === 'motorcycle') {
+  } else if (
+    mode === 'two-wheeler' || 
+    mode === 'two wheeler' || 
+    mode === 'motorbike' || 
+    mode === 'motorcycle' || 
+    mode === 'transit' || 
+    mode === 'public transit' || 
+    mode === 'bus' || 
+    mode === 'metro'
+  ) {
     base = 1.5;
   } else if (mode === 'bike' || mode === 'bicycle') {
     base = 1.8;
   } else if (mode === 'walk' || mode === 'walking') {
     base = 2.0;
-  } else if (mode === 'transit' || mode === 'bus' || mode === 'metro') {
-    base = 1.2;
   }
 
   let hasPenalty = false;
