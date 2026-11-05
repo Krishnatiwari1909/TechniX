@@ -24,7 +24,7 @@ AtmosAi is a cross-platform, real-time environmental early-warning and route exp
 ### 3. ⏳ Diurnal Inversion & Time-Shift Departure Simulation
 - **Morning Inversion Engine**: Identifies hazardous ground-level temperature inversions between 06:00 AM and 08:30 AM, automatically applying a $1.3\times$ exposure surcharge with contextual alert badges.
 - **Lungs Saved Metric**: Converts microgram particulate avoidance into Berkeley Earth cigarette equivalents ($22\,\mu\text{g/m}^3 \approx 1\text{ cigarette/day}$).
-- **Interactive Departure Slider**: Interactive slider comparing exposure at 15-minute intervals throughout peak traffic periods.
+- **Interactive Departure Slider for the application**: Interactive slider comparing exposure at 15-minute intervals throughout peak traffic periods.
 
 ### 4. 🤖 Generative AI & Emergency Shield
 - **Morning Commute Briefing**: One-click AI commute safety briefing powered by **Google Gemini 3.5 Flash**, factoring in destination and transport mode.
