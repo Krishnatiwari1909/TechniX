@@ -161,7 +161,7 @@ def generate_fallback_alert_tone() -> bytes:
 @app.post("/api/chat")
 async def chat_with_atmos(payload: ChatRequest):
     """
-    Phase 23 Task 1: Live Gemini Streaming via google-genai SDK (gemini-2.5-flash).
+    Phase 23: Live Gemini Streaming via google-genai SDK (gemini-3.8-flash).
     Accepts message, persona context, and current_pm25.
     Constructs a dedicated system prompt telling Gemini to act as "AtmosAi".
     """
@@ -194,11 +194,11 @@ async def chat_with_atmos(payload: ChatRequest):
                 f"User question: {user_msg}"
             )
 
-            # Task 1: Initialize and call google-genai SDK with gemini-2.5-flash
+            # Initialize and call google-genai SDK with gemini-3.8-flash
             response = None
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.8-flash",
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         system_instruction=system_instruction,
@@ -206,8 +206,8 @@ async def chat_with_atmos(payload: ChatRequest):
                     )
                 )
             except Exception as e_model:
-                print(f"[Gemini 2.5-flash call notice]: {e_model}. Trying fallback flash model...")
-                for fallback_model in ["gemini-3.8-flash", "gemini-2.5-flash-lite"]:
+                print(f"[Gemini 3.8-flash call notice]: {e_model}. Trying fallback flash model...")
+                for fallback_model in ["gemini-2.5-flash", "gemini-2.5-flash-lite"]:
                     try:
                         response = client.models.generate_content(
                             model=fallback_model,
@@ -230,7 +230,7 @@ async def chat_with_atmos(payload: ChatRequest):
                         "reply": response.text.strip(),
                         "persona": persona,
                         "current_pm25": pm25,
-                        "model": "gemini-2.5-flash"
+                        "model": "gemini-3.8-flash"
                     },
                     headers={"Content-Type": "application/json; charset=utf-8"}
                 )
