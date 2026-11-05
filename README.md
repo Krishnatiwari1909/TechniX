@@ -27,7 +27,7 @@ AtmosAi is a cross-platform, real-time environmental early-warning and route exp
 - **Interactive Departure Slider**: Interactive slider comparing exposure at 15-minute intervals throughout peak traffic periods.
 
 ### 4. 🤖 Generative AI & Emergency Shield
-- **Morning Commute Briefing**: One-click AI commute safety briefing powered by **Google Gemini 1.5 Flash**, factoring in destination and transport mode.
+- **Morning Commute Briefing**: One-click AI commute safety briefing powered by **Google Gemini 3.5 Flash**, factoring in destination and transport mode.
 - **AI Voice Shield**: Voice broadcasts via **ElevenLabs TTS** with an automatic, zero-dependency offline fallback to browser **Web Speech API** (`window.speechSynthesis`).
 - **Emergency SOS Dispatch**: Emergency dispatch integration with Twilio SMS and Resend email alerts.
 
@@ -51,7 +51,7 @@ AtmosAi is a cross-platform, real-time environmental early-warning and route exp
 
 ### 2. Backend Setup
 ```bash
-cd AtmosAi-V2/backend
+cd AtmosAi/backend
 python -m venv venv
 .\venv\Scripts\activate   # On Windows
 pip install -r requirements.txt
@@ -61,7 +61,7 @@ Backend will be live at `http://127.0.0.1:8000` with Swagger docs at `http://127
 
 ### 3. Frontend Setup
 ```bash
-cd AtmosAi-V2
+cd AtmosAi
 npm install
 npm run dev
 ```
