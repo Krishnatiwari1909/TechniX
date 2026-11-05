@@ -654,6 +654,25 @@ async def get_model_evaluation():
             "predicted_pm25": round(predicted_pm25, 1)
         })
 
+    # Phase 22 Task 1: Dynamic Baseline Offset
+    # Find the difference between the very last actual_pm25 value and the corresponding predicted_pm25 value
+    last_actual_idx = None
+    for idx, item in enumerate(results):
+        if item.get("actual_pm25") is not None:
+            last_actual_idx = idx
+
+    if last_actual_idx is not None:
+        last_actual = results[last_actual_idx]["actual_pm25"]
+        last_pred = results[last_actual_idx]["predicted_pm25"]
+        offset = last_pred - last_actual
+
+        # Subtract this difference (the offset) from pivot hour and all future predictions
+        # so the green line seamlessly connects to where the red line ends
+        for idx in range(last_actual_idx, len(results)):
+            raw_pred = results[idx]["predicted_pm25"]
+            adjusted_pred = max(5.0, round(raw_pred - offset, 1))
+            results[idx]["predicted_pm25"] = adjusted_pred
+
     return results
 
 # ==============================================================================
