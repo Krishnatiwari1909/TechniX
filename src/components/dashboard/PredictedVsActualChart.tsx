@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -20,8 +20,8 @@ interface CustomTooltipProps {
 
 const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
-    const actual = payload.find(p => p.dataKey === 'actualPM25')?.value;
-    const predicted = payload.find(p => p.dataKey === 'predictedPM25')?.value;
+    const actual = payload.find(p => p.dataKey === 'actual_pm25' || p.dataKey === 'actualPM25')?.value;
+    const predicted = payload.find(p => p.dataKey === 'predicted_pm25' || p.dataKey === 'predictedPM25')?.value;
 
     return (
       <div className="bg-white p-3.5 rounded-xl border border-stone-200 shadow-xl text-xs space-y-1.5">
@@ -62,7 +62,48 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
 };
 
 export const PredictedVsActualChart: React.FC = () => {
-  const [data] = useState(INITIAL_HOURLY_DATA);
+  const [data, setData] = useState<any[]>(() => 
+    INITIAL_HOURLY_DATA.map(d => ({
+      ...d,
+      actual_pm25: d.actualPM25,
+      predicted_pm25: d.predictedPM25
+    }))
+  );
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Phase 17 Task 2: Fetch 16-hour evaluation from /api/model-evaluation
+  useEffect(() => {
+    let isMounted = true;
+    const fetchEvaluation = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api/model-evaluation');
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json) && json.length > 0) {
+            const mapped = json.map((item: any) => ({
+              time: item.time,
+              actual_pm25: item.actual_pm25,
+              predicted_pm25: item.predicted_pm25,
+              actualPM25: item.actual_pm25,
+              predictedPM25: item.predicted_pm25
+            }));
+            if (isMounted) {
+              setData(mapped);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[PredictedVsActualChart] Error fetching model evaluation, using fallback:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    fetchEvaluation();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="bg-white rounded-2xl p-5 sm:p-6 border border-stone-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden flex flex-col justify-between">
@@ -142,7 +183,7 @@ export const PredictedVsActualChart: React.FC = () => {
             {/* Solid Coral Red Line: Actual PM2.5 */}
             <Line
               type="monotone"
-              dataKey="actualPM25"
+              dataKey="actual_pm25"
               name="Actual PM2.5"
               stroke="#f43f5e"
               strokeWidth={3}
@@ -155,7 +196,7 @@ export const PredictedVsActualChart: React.FC = () => {
             {/* Dashed Sage Green Line: Predicted PM2.5 */}
             <Line
               type="monotone"
-              dataKey="predictedPM25"
+              dataKey="predicted_pm25"
               name="Predicted PM2.5"
               stroke="#059669"
               strokeWidth={2.5}
