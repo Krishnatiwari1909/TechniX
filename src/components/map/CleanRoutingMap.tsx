@@ -237,7 +237,7 @@ export const CleanRoutingMap: React.FC = () => {
                 <div className="p-1.5 rounded-lg bg-white/5">
                   <span className="text-[10px] text-slate-400 block">Distance</span>
                   <span className="text-xs sm:text-sm font-bold text-white font-mono">
-                    {route.distanceKm} km
+                    {route.distanceKm.toFixed(1)} km
                   </span>
                 </div>
               </div>

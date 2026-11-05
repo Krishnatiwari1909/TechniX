@@ -16,13 +16,11 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-# Load environment variables (supports .env and .evn in backend and root)
+# Load unified environment variables from project root (.env)
 base_dir = Path(__file__).resolve().parent
 for candidate in [
-    base_dir / ".env",
     base_dir.parent / ".env",
-    base_dir / ".evn",
-    base_dir.parent / ".evn",
+    base_dir / ".env",
 ]:
     if candidate.exists():
         load_dotenv(dotenv_path=candidate, override=True)

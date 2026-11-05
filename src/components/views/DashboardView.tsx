@@ -3,7 +3,6 @@ import { AQIHeroCard } from '../dashboard/AQIHeroCard';
 import { PredictedVsActualChart } from '../dashboard/PredictedVsActualChart';
 import { TimeShiftSlider } from '../dashboard/TimeShiftSlider';
 import { LungsSavedCard } from '../dashboard/LungsSavedCard';
-import { RouteMap } from '../map/RouteMap';
 import { useApp } from '../../context/AppContext';
 import { 
   ArrowRight, 
@@ -563,34 +562,44 @@ export const DashboardView: React.FC = () => {
 
       </div>
 
-      {/* Gamified Stat Card & Clean Routing Map */}
+      {/* Gamified Health Impact & Clean Routing Callout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Gamified Lungs Saved (5 cols) */}
-        <div className="lg:col-span-5 flex flex-col">
+        {/* Gamified Lungs Saved (8 cols) */}
+        <div className="lg:col-span-8 flex flex-col">
           <LungsSavedCard />
         </div>
 
-        {/* RouteMap Component (7 cols) */}
-        <div className="lg:col-span-7 flex flex-col">
-          <div className="glass-panel rounded-2xl p-5 border border-stone-200/80 flex-1 flex flex-col justify-between shadow-sm bg-white">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Navigation className="w-4 h-4 text-emerald-600" />
-                <h3 className="font-bold text-slate-900 text-base">
-                  Route Optimization Preview
-                </h3>
+        {/* Clean Air Navigation Callout to dedicated Map Page (4 cols) */}
+        <div className="lg:col-span-4 flex flex-col">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-stone-200/80 flex-1 flex flex-col justify-between shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm">
+                  <Navigation className="w-5 h-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+                    Clean Air Routing
+                  </h3>
+                  <span className="text-[11px] text-emerald-700 font-bold block">
+                    Turn-by-Turn Navigation
+                  </span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setActiveTab('map')}
-                className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold cursor-pointer"
-              >
-                Full Map View →
-              </button>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Plan trips between custom origins &amp; destinations. Our ML engine steers you through green canopy corridors to minimize alveolar toxin intake.
+              </p>
             </div>
-            
-            <RouteMap />
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('map')}
+              className="mt-5 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
+            >
+              <span>Explore Dedicated Map</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
 

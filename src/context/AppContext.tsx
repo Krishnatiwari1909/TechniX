@@ -24,10 +24,17 @@ interface AppContextType {
   setChatOpen: (open: boolean) => void;
   selectedRouteId: string;
   setSelectedRouteId: (id: string) => void;
-  userLocation: { lat: number; lng: number; name?: string } | null;
-  setUserLocation: (loc: { lat: number; lng: number; name?: string } | null) => void;
+  userLocation: { lat: number; lng: number; name?: string; locality?: string } | null;
+  setUserLocation: (loc: { lat: number; lng: number; name?: string; locality?: string } | null) => void;
   isLocating: boolean;
 }
+
+export const BENGALURU_FALLBACK_COORDS = {
+  lat: 12.9716,
+  lng: 77.5946,
+  name: 'Bengaluru (MG Road)',
+  locality: 'Bengaluru'
+};
 
 const DEFAULT_PROFILE: UserProfile = {
   name: 'Alex Chen',
@@ -80,8 +87,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [chatOpen, setChatOpen] = useState<boolean>(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string>('route-clean');
   
-  // Task 1: Auto-Geolocation state
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; name?: string } | null>(null);
+  // Task 2: Auto-Geolocation with guaranteed Bengaluru [12.9716, 77.5946] Fallback
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; name?: string; locality?: string } | null>(BENGALURU_FALLBACK_COORDS);
   const [isLocating, setIsLocating] = useState<boolean>(false);
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
@@ -94,14 +101,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return DEFAULT_PROFILE;
   });
 
-  // Task 1: Auto-Geolocation on mount with real-time Open-Meteo local PM2.5 fetch
+  // Task 2: Auto-Geolocation on mount with Bengaluru default fallback if blocked, failing, or timed out
   useEffect(() => {
+    const applyBengaluruFallback = () => {
+      setUserLocation(BENGALURU_FALLBACK_COORDS);
+      setIsLocating(false);
+    };
+
     if (typeof window !== 'undefined' && 'geolocation' in navigator) {
       setIsLocating(true);
+
+      // Safety timeout (5s): if browser hangs or takes too long, fallback to Bengaluru
+      const timeoutId = setTimeout(() => {
+        setUserLocation(prev => {
+          if (!prev || (prev.lat === BENGALURU_FALLBACK_COORDS.lat && prev.lng === BENGALURU_FALLBACK_COORDS.lng)) {
+            console.warn('[Auto-Geolocation] Geolocation timed out (5s), defaulting to Bengaluru [12.9716, 77.5946]');
+            return BENGALURU_FALLBACK_COORDS;
+          }
+          return prev;
+        });
+        setIsLocating(false);
+      }, 5000);
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
+          clearTimeout(timeoutId);
           const { latitude, longitude } = position.coords;
-          setUserLocation({ lat: latitude, lng: longitude });
+
+          if (latitude == null || longitude == null || isNaN(latitude) || isNaN(longitude)) {
+            applyBengaluruFallback();
+            return;
+          }
+
+          setUserLocation({ lat: latitude, lng: longitude, locality: 'Live Location', name: 'Live GPS Location' });
 
           try {
             // 1. Fetch real-time localized PM2.5 from Open-Meteo Air Quality API
@@ -127,7 +159,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (geoRes.ok) {
               const geoData = await geoRes.json();
               const placeName = geoData.locality || geoData.city || geoData.principalSubdivision || 'Detected Location';
-              setUserLocation(prev => prev ? { ...prev, name: placeName } : null);
+              setUserLocation({ lat: latitude, lng: longitude, name: placeName, locality: placeName });
               setUserProfile(prev => {
                 const updated = { ...prev, destination: placeName };
                 try {
@@ -145,11 +177,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         },
         (error) => {
-          console.warn('[Auto-Geolocation] Location permission or device unavailable:', error.message);
-          setIsLocating(false);
+          clearTimeout(timeoutId);
+          console.warn('[Auto-Geolocation] Location permission blocked or failed:', error.message);
+          applyBengaluruFallback();
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
       );
+    } else {
+      applyBengaluruFallback();
     }
   }, []);
 

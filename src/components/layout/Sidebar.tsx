@@ -21,7 +21,7 @@ export const Sidebar: React.FC = () => {
   ] as const;
 
   return (
-    <aside className="hidden md:flex flex-col w-64 lg:w-72 shrink-0 h-screen sticky top-0 bg-white border-r border-stone-200/80 p-5 z-30 justify-between select-none shadow-[4px_0_24px_-4px_rgba(0,0,0,0.03)]">
+    <aside className="hidden md:flex flex-col fixed top-0 left-0 h-screen w-64 lg:w-72 bg-white border-r border-stone-200/80 p-5 z-30 justify-between select-none shadow-[4px_0_24px_-4px_rgba(0,0,0,0.03)] overflow-y-auto">
       {/* Top Section */}
       <div className="space-y-6">
         

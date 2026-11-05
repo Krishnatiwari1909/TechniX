@@ -182,21 +182,16 @@ export const AskAtmosFAB: React.FC = () => {
     <>
       {/* FLOATING ACTION BUTTON (FAB) */}
       {!chatOpen && (
-        <div
-          className="fixed z-40 right-4 sm:right-6"
-          style={{
-            bottom: 'calc(4.75rem + env(safe-area-inset-bottom, 0px))'
-          }}
-        >
+        <div className="fixed right-4 bottom-20 md:right-6 md:bottom-6 z-[50]">
           <button
             type="button"
             onClick={() => setChatOpen(true)}
-            className="group relative flex items-center gap-2.5 px-4 py-3 sm:px-5 sm:py-3.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition-all duration-300 border border-emerald-500/30 cursor-pointer"
+            className="group relative flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 text-sm md:text-base rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-xl hover:shadow-emerald-600/30 active:scale-95 transition-all duration-300 border border-emerald-500/30 cursor-pointer"
             aria-label="Ask Atmos AI"
           >
             <div className="relative flex items-center gap-2 z-10 text-white">
-              <Sparkles className="w-5 h-5 text-emerald-100 animate-bounce" />
-              <span className="text-sm font-extrabold tracking-tight">
+              <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-emerald-100 animate-bounce" />
+              <span className="font-extrabold tracking-tight">
                 Ask Atmos
               </span>
               <span className="hidden md:inline text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-emerald-800 border border-emerald-500/40 text-emerald-100">
@@ -210,7 +205,7 @@ export const AskAtmosFAB: React.FC = () => {
       {/* SLIDE-UP CHAT INTERFACE */}
       {chatOpen && (
         <div
-          className="fixed z-50 right-2 sm:right-6 bottom-0 sm:bottom-6 w-[calc(100vw-1rem)] sm:w-[420px] max-w-full h-[85vh] sm:h-[580px] max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-white border border-stone-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 duration-300"
+          className="fixed z-[60] right-2 sm:right-6 bottom-20 sm:bottom-6 w-[calc(100vw-1rem)] sm:w-[420px] max-w-full h-[75vh] sm:h-[580px] max-h-[85vh] flex flex-col rounded-3xl bg-white border border-stone-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 duration-300"
           style={{
             paddingBottom: 'env(safe-area-inset-bottom, 0px)'
           }}
