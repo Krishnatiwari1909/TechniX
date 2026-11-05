@@ -27,61 +27,21 @@ export const Auth: React.FC<AuthProps> = ({
     setSuccessNotice(null);
     setLoading(true);
 
-    if (!isSupabaseConfigured()) {
-      // If Supabase credentials are placeholders in .env, offer quick bypass notice
-      setLoading(false);
-      setErrorMessage(
-        'Supabase is not configured yet with valid credentials in .env (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY). You can continue as a Guest to explore the dashboard immediately.'
-      );
-      return;
-    }
+    const effectiveName = fullName.trim() || email.split('@')[0] || 'Commuter';
+    const authPayload = {
+      name: effectiveName,
+      email: email.trim() || 'demo@atmosai.dev',
+      isLoggedIn: true
+    };
 
-    try {
-      if (isSignUp) {
-        if (fullName.trim()) {
-          localStorage.setItem('atmosai_user_name', fullName.trim());
-        }
-        // Sign Up Flow
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName.trim() || 'Commuter',
-            },
-          },
-        });
+    // Phase 21 Task 1: Mock Authentication via localStorage
+    localStorage.setItem('atmos_auth', JSON.stringify(authPayload));
+    localStorage.setItem('atmosai_authenticated', 'true');
+    localStorage.setItem('atmosai_user_name', effectiveName);
 
-        if (error) throw error;
-
-        // If email confirmation is disabled or session exists, go straight to Profile Setup
-        if (data.session) {
-          onSignUpSuccess();
-        } else if (data.user) {
-          setSuccessNotice('Account registered! Please check your email inbox to confirm your account, or proceed with profile setup.');
-          setTimeout(() => {
-            onSignUpSuccess();
-          }, 1500);
-        }
-      } else {
-        // Log In Flow
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) throw error;
-
-        if (data.session) {
-          onLoginSuccess();
-        }
-      }
-    } catch (err: any) {
-      console.error('[Supabase Auth Error]:', err);
-      setErrorMessage(err.message || 'Authentication failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
+    // Instantly route to Setup Wizard component
+    onSignUpSuccess();
   };
 
   return (

@@ -43,57 +43,66 @@ export const DashboardView: React.FC = () => {
     isSimulatingRef.current = isSimulating;
   }, [isSimulating]);
 
-  // Phase 19 Task 3: Supabase & localStorage profile fetch and dynamic multiplier sync on mount
+  // Phase 21 Task 3: Dashboard Hydration from localStorage 'atmos_auth' and 'atmos_profile'
   useEffect(() => {
     let isCancelled = false;
-    const fetchUserProfile = async () => {
-      // 1. Check localStorage for fast initial profile sync
+    const hydrateDashboardFromStorage = () => {
+      let resolvedName = userProfile.name;
+      let resolvedMode: CommuteMode = userProfile.commuteMode;
+      let resolvedSensitivities: string[] = userProfile.sensitivities || ['Asthma'];
+      let resolvedPersona = userProfile.persona;
+
+      // 1. Read 'atmos_auth' for user's actual registered name
       try {
-        const saved = localStorage.getItem('atmosai_user_profile_v2');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && !isCancelled) {
-            const calculatedMult = calculateDynamicMultiplier(
-              parsed.sensitivities || parsed.persona,
-              parsed.commuteMode
-            );
-            updateProfile({
-              ...parsed,
-              exposureMultiplier: calculatedMult
-            });
+        const rawAuth = localStorage.getItem('atmos_auth');
+        if (rawAuth) {
+          const authObj = JSON.parse(rawAuth);
+          if (authObj.name) {
+            resolvedName = authObj.name;
           }
         }
       } catch (e) {
-        console.warn('[DashboardView] localStorage profile read notice:', e);
+        console.warn('[DashboardView] Error reading atmos_auth:', e);
       }
 
-      // 2. Fetch from Supabase user_profiles if configured
-      if (!isSupabaseConfigured()) return;
+      // 2. Read 'atmos_profile' (with fallback to 'atmosai_user_profile_v2')
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data, error } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-
-          if (!isCancelled && data && !error) {
-            const fetchedMultiplier = calculateDynamicMultiplier(data.health_persona, data.transport_mode);
-            updateProfile({
-              name: data.full_name || user.user_metadata?.full_name || userProfile.name,
-              commuteMode: (data.transport_mode as CommuteMode) || userProfile.commuteMode,
-              persona: data.health_persona === 'athlete' ? 'runner' : (data.health_persona === 'asthmatic' ? 'asthmatic' : 'elderly'),
-              exposureMultiplier: fetchedMultiplier,
-            });
+        const rawProfile = localStorage.getItem('atmos_profile') || localStorage.getItem('atmosai_user_profile_v2');
+        if (rawProfile) {
+          const profileObj = JSON.parse(rawProfile);
+          if (profileObj.name && (!resolvedName || resolvedName === 'Alex Chen' || resolvedName === 'Commuter')) {
+            resolvedName = profileObj.name;
+          }
+          if (profileObj.commuteMode) {
+            resolvedMode = profileObj.commuteMode as CommuteMode;
+          }
+          if (profileObj.sensitivities) {
+            resolvedSensitivities = profileObj.sensitivities;
+          }
+          if (profileObj.persona) {
+            resolvedPersona = profileObj.persona;
           }
         }
-      } catch (err) {
-        console.warn('[DashboardView] Supabase profile fetch notice:', err);
+      } catch (e) {
+        console.warn('[DashboardView] Error reading atmos_profile:', e);
+      }
+
+      // 3. Apply exact Two-Wheeler / Asthma exposure multipliers
+      const calculatedMult = calculateDynamicMultiplier(resolvedSensitivities, resolvedMode);
+
+      if (!isCancelled) {
+        updateProfile({
+          name: resolvedName,
+          commuteMode: resolvedMode,
+          sensitivities: resolvedSensitivities,
+          persona: resolvedPersona,
+          exposureMultiplier: calculatedMult,
+          onboardingCompleted: true
+        });
       }
     };
 
-    fetchUserProfile();
+    hydrateDashboardFromStorage();
     return () => {
       isCancelled = true;
     };

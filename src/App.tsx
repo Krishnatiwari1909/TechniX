@@ -70,7 +70,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onOpenAuth, onOpenSetup }) => {
 
 export const App: React.FC = () => {
   const [authScreen, setAuthScreen] = useState<'auth' | 'setup' | 'app'>(() => {
-    // Phase 19 Task 2: Root loads Auth.tsx if no user is authenticated
+    // Phase 21 Task 1: Check localStorage for mock auth state
+    try {
+      const auth = JSON.parse(localStorage.getItem('atmos_auth') || '{}');
+      if (auth.isLoggedIn) return 'app';
+    } catch {}
     const isAuthenticated = localStorage.getItem('atmosai_authenticated') === 'true';
     return isAuthenticated ? 'app' : 'auth';
   });

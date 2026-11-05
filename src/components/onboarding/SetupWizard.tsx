@@ -29,6 +29,10 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
   
   const [step, setStep] = useState<number>(1);
   const [userName, setUserName] = useState<string>(() => {
+    try {
+      const auth = JSON.parse(localStorage.getItem('atmos_auth') || '{}');
+      if (auth.name) return auth.name;
+    } catch {}
     return localStorage.getItem('atmosai_user_name') || userProfile.name || 'Commuter';
   });
   const [selectedPersona, setSelectedPersona] = useState<PersonaType>(userProfile.persona || 'runner');
@@ -67,45 +71,30 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
     );
   };
 
-  const handleSaveAndRedirect = async () => {
-    const profileData = {
+  const handleSaveAndRedirect = () => {
+    // Phase 21 Task 2: Mock Database in localStorage
+    const wizardData = {
       name: userName || userProfile.name || 'Commuter',
       persona: selectedPersona,
+      commuteMode,
+      sensitivities,
       emergencyName,
       emergencyContact,
       commuteTime,
       returnTime,
-      commuteMode,
       destination,
-      sensitivities,
       exposureMultiplier: currentMultiplier,
       onboardingCompleted: true
     };
 
-    updateProfile(profileData);
+    updateProfile(wizardData);
     try {
-      localStorage.setItem('atmosai_user_profile_v2', JSON.stringify(profileData));
+      localStorage.setItem('atmos_profile', JSON.stringify(wizardData));
+      localStorage.setItem('atmosai_user_profile_v2', JSON.stringify(wizardData));
       localStorage.setItem('atmosai_visited', 'true');
       localStorage.setItem('atmosai_authenticated', 'true');
     } catch (e) {
-      console.warn('localStorage save notice:', e);
-    }
-
-    if (isSupabaseConfigured()) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('user_profiles').upsert({
-            id: user.id,
-            full_name: profileData.name,
-            transport_mode: commuteMode,
-            health_persona: selectedPersona,
-            updated_at: new Date().toISOString()
-          });
-        }
-      } catch (err) {
-        console.warn('[SetupWizard] Supabase user_profiles save error:', err);
-      }
+      console.warn('[SetupWizard] localStorage save notice:', e);
     }
 
     if (onComplete) onComplete();
