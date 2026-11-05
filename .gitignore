@@ -16,8 +16,14 @@ dist-ssr
 # Python backend virtualenv & cache
 backend/venv/
 backend/.env
+backend/.evn
 venv/
 .env
+.evn
+*.env
+*.evn
+!.env.example
+!backend/.env.example
 __pycache__/
 *.py[cod]
 *$py.class

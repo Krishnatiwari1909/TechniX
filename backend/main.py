@@ -12,10 +12,20 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
+from pathlib import Path
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables (supports .env and .evn in backend and root)
+base_dir = Path(__file__).resolve().parent
+for candidate in [
+    base_dir / ".env",
+    base_dir.parent / ".env",
+    base_dir / ".evn",
+    base_dir.parent / ".evn",
+]:
+    if candidate.exists():
+        load_dotenv(dotenv_path=candidate, override=True)
 load_dotenv()
 
 # Initialize FastAPI application
@@ -57,6 +67,8 @@ class VoiceAlertRequest(BaseModel):
 class SOSRequest(BaseModel):
     contact_number: Optional[str] = Field(None, description="Emergency phone number for SMS alert")
     email: Optional[str] = Field(None, description="Emergency email address for alert notification")
+    persona: Optional[str] = Field("Asthma", description="User health profile persona (e.g. Asthma, Runner)")
+    current_pm25: Optional[float] = Field(None, description="Current localized PM2.5 level")
 
 # ==============================================================================
 # Helper Fallback Audio Synthesizer
@@ -233,8 +245,9 @@ async def generate_voice_alert(payload: VoiceAlertRequest):
 @app.post("/api/sos")
 async def trigger_emergency_sos(payload: SOSRequest):
     """
-    Accepts contact_number or email.
-    Dispatches message: 'AtmosAi Alert: Hazardous PM2.5 levels detected. Seek indoor shelter.'
+    Accepts contact_number, email, persona, and current_pm25.
+    Dispatches dynamic emergency message:
+    'AtmosAi EMERGENCY: The user is in a hazardous zone (PM2.5: {current_pm25}). Their health profile is marked as: {persona}. Please contact them immediately.'
     via Twilio SMS or Resend Email.
     """
     raw_contact = (payload.contact_number or "").strip()
@@ -249,7 +262,15 @@ async def trigger_emergency_sos(payload: SOSRequest):
             detail="Either 'contact_number' or 'email' must be provided."
         )
 
-    EMERGENCY_MESSAGE = "AtmosAi Alert: Hazardous PM2.5 levels detected. Seek indoor shelter."
+    # Format dynamic message fields
+    persona = (payload.persona or "Asthma").strip()
+    raw_pm = payload.current_pm25 if payload.current_pm25 is not None else 84.0
+    current_pm25 = int(raw_pm) if isinstance(raw_pm, (int, float)) and raw_pm == int(raw_pm) else round(float(raw_pm), 1)
+
+    EMERGENCY_MESSAGE = (
+        f"AtmosAi EMERGENCY: The user is in a hazardous zone (PM2.5: {current_pm25}). "
+        f"Their health profile is marked as: {persona}. Please contact them immediately."
+    )
     dispatched_via = []
     dispatch_details = {}
 
@@ -286,7 +307,7 @@ async def trigger_emergency_sos(payload: SOSRequest):
             resend_result = resend.Emails.send({
                 "from": resend_from,
                 "to": email,
-                "subject": "⚠️ AtmosAi Emergency: Hazardous PM2.5 Alert",
+                "subject": f"⚠️ AtmosAi Emergency: Hazardous PM2.5 Alert ({persona})",
                 "text": EMERGENCY_MESSAGE
             })
             dispatched_via.append("resend_email")
@@ -306,6 +327,8 @@ async def trigger_emergency_sos(payload: SOSRequest):
             "message": "Emergency SOS successfully dispatched.",
             "alert_text": EMERGENCY_MESSAGE,
             "dispatched_via": dispatched_via,
+            "persona": persona,
+            "current_pm25": current_pm25,
             "recipient": {
                 "contact_number": raw_contact or None,
                 "email": email or None

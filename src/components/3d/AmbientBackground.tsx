@@ -15,26 +15,16 @@ interface DriftingParticlesProps {
   windSpeed: number;
 }
 
-// Task 2: Realistic 3D Round Particles using InstancedMesh with THREE.SphereGeometry
+// Task 3: Ultra-Subtle 3D Round Particles using InstancedMesh with THREE.SphereGeometry (Taupe / Light Theme)
 const RealisticSpheres: React.FC<DriftingParticlesProps> = ({ pm25Level, windDirection, windSpeed }) => {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const materialRef = useRef<THREE.MeshStandardMaterial>(null);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
-  // Compute trigonometric wind vector
-  const windVector = useMemo(() => {
-    const rad = (windDirection * Math.PI) / 180;
-    const baseScalar = Math.max(windSpeed, 2) * 0.0008; // Lowered velocity for gentle drift
-    return {
-      vx: Math.cos(rad) * baseScalar,
-      vy: Math.sin(rad) * baseScalar
-    };
-  }, [windDirection, windSpeed]);
-
-  // Particle count based on PM2.5 level (min 180, max 650 for smooth instanced rendering)
+  // Particle count based on PM2.5 level (min 140, max 360 for minimal, light aesthetic)
   const particleCount = useMemo(() => {
     const normalized = Math.min(Math.max((pm25Level - 15) / 185, 0), 1);
-    return Math.floor(180 + normalized * 470);
+    return Math.floor(140 + normalized * 220);
   }, [pm25Level]);
 
   // Store position, base velocities, scales, and random sine phases for wobble
@@ -42,66 +32,58 @@ const RealisticSpheres: React.FC<DriftingParticlesProps> = ({ pm25Level, windDir
     const data = [];
     for (let i = 0; i < particleCount; i++) {
       data.push({
-        x: (Math.random() - 0.5) * 40,
-        y: (Math.random() - 0.5) * 32,
-        z: (Math.random() - 0.5) * 28,
-        // Lowered base velocities for slow organic drift
-        vx: (Math.random() - 0.5) * 0.004,
-        vy: 0.002 + Math.random() * 0.005,
-        vz: (Math.random() - 0.5) * 0.004,
-        scale: 0.8 + Math.random() * 0.8,
+        x: (Math.random() - 0.5) * 38,
+        y: (Math.random() - 0.5) * 30,
+        z: (Math.random() - 0.5) * 26,
+        driftX: (Math.random() - 0.5) * 0.0002,
+        driftY: (Math.random() - 0.5) * 0.0002,
+        driftZ: (Math.random() - 0.5) * 0.0003,
+        scale: 0.65 + Math.random() * 0.5,
         phase: Math.random() * Math.PI * 2,
-        wobbleSpeed: 0.6 + Math.random() * 0.8
+        wobbleSpeed: 0.3 + Math.random() * 0.4
       });
     }
     return data;
   }, [particleCount]);
 
-  // Target color interpolates from clean teal/emerald to amber to warning red
-  const targetColor = useMemo(() => {
-    const c = new THREE.Color();
-    if (pm25Level <= 35) {
-      c.set('#2dd4bf'); // Clean teal (#2dd4bf) to match forest theme
-    } else if (pm25Level <= 75) {
-      const t = (pm25Level - 35) / 40;
-      c.set('#2dd4bf').lerp(new THREE.Color('#f59e0b'), t); // Amber
-    } else if (pm25Level <= 130) {
-      const t = (pm25Level - 75) / 55;
-      c.set('#f59e0b').lerp(new THREE.Color('#ef4444'), t); // Warning Red
-    } else {
-      c.set('#dc2626'); // Hazardous Red
-    }
-    return c;
-  }, [pm25Level]);
-
-  // Frame update - combines lowered base velocity, sine-wave Y wobble, and wind drift
+  // Frame update - Speed Nerfed by 10x: lazy dust motes floating in a sunbeam
   useFrame((state, delta) => {
     if (!meshRef.current) return;
 
     const time = state.clock.elapsedTime;
-    const speedMultiplier = 1 + (pm25Level / 200) * 0.5;
+
+    // Task 3: Speed Nerf - multiply wind speed by 0.02 and cap idle threshold to 0.005
+    const currentSpeed = Math.max(0.005, (windSpeed ?? 0) * 0.02);
+
+    // Apply directional vectors with 10x slower velocity scalar
+    const radians = (((windDirection ?? 0) * Math.PI) / 180);
+    const speedFactor = 0.001; // Divided by 10 for barely noticeable, lazy floating dust
+    const velX = Math.cos(radians) * currentSpeed * speedFactor;
+    const velY = Math.sin(radians) * currentSpeed * speedFactor;
+
+    // Ultra-subtle sine-wave wobble on vertical axis
+    const small_value = 0.0006;
 
     for (let i = 0; i < particleCount; i++) {
       const p = particles[i];
 
-      // Task 2: Sine-wave wobble on Y-axis for organic suspended-in-air physics
-      const wobbleY = Math.sin(time * p.wobbleSpeed + p.phase) * 0.005;
+      // Organic sine-wave wobble on vertical axis
+      const wobbleY = Math.sin(time * p.wobbleSpeed + p.phase) * small_value;
 
-      p.x += (p.vx + windVector.vx) * speedMultiplier;
-      p.y += (p.vy + windVector.vy + wobbleY) * speedMultiplier;
-      p.z += p.vz * speedMultiplier;
+      p.x += velX + p.driftX;
+      p.y += velY + wobbleY + p.driftY;
+      p.z += p.driftZ;
 
-      // Wrap around bounds
-      if (p.y > 20) p.y = -20;
-      if (p.y < -20) p.y = 20;
-      if (p.x > 26) p.x = -26;
-      if (p.x < -26) p.x = 26;
-      if (p.z > 16) p.z = -16;
-      if (p.z < -16) p.z = 16;
+      // Wrap around bounds so particles smoothly loop through viewport
+      if (p.x > 24) p.x = -24;
+      if (p.x < -24) p.x = 24;
+      if (p.y > 18) p.y = -18;
+      if (p.y < -18) p.y = 18;
+      if (p.z > 14) p.z = -14;
+      if (p.z < -14) p.z = 14;
 
       dummy.position.set(p.x, p.y, p.z);
-      const dynamicScale = p.scale * (1 + Math.min(pm25Level / 350, 0.4));
-      dummy.scale.set(dynamicScale, dynamicScale, dynamicScale);
+      dummy.scale.set(p.scale, p.scale, p.scale);
       dummy.updateMatrix();
 
       meshRef.current.setMatrixAt(i, dummy.matrix);
@@ -109,14 +91,9 @@ const RealisticSpheres: React.FC<DriftingParticlesProps> = ({ pm25Level, windDir
 
     meshRef.current.instanceMatrix.needsUpdate = true;
 
-    // Gentle global rotation
-    meshRef.current.rotation.y += delta * 0.015;
-    meshRef.current.rotation.x = Math.sin(time * 0.1) * 0.03;
-
-    if (materialRef.current) {
-      materialRef.current.color.lerp(targetColor, 0.05);
-      materialRef.current.emissive.lerp(targetColor, 0.05);
-    }
+    // Very gentle global rotation
+    meshRef.current.rotation.y += delta * 0.004;
+    meshRef.current.rotation.x = Math.sin(time * 0.05) * 0.01;
   });
 
   return (
@@ -125,33 +102,30 @@ const RealisticSpheres: React.FC<DriftingParticlesProps> = ({ pm25Level, windDir
       args={[undefined, undefined, particleCount]}
       frustumCulled={false}
     >
-      {/* Task 2: Perfectly round 3D spheres via THREE.SphereGeometry */}
-      <sphereGeometry args={[0.09, 10, 10]} />
+      {/* Task 3: Soft, semi-transparent taupe or warm gray dust motes */}
+      <sphereGeometry args={[0.07, 8, 8]} />
       <meshStandardMaterial
         ref={materialRef}
-        color={targetColor}
-        emissive={targetColor}
-        emissiveIntensity={0.65}
-        roughness={0.2}
-        metalness={0.1}
+        color="#a8a29e"
+        emissive="#d6d3d1"
+        emissiveIntensity={0.05}
+        roughness={0.9}
+        metalness={0.05}
         transparent
-        opacity={Math.min(0.55 + (pm25Level / 250) * 0.35, 0.95)}
+        opacity={0.15}
       />
     </instancedMesh>
   );
 };
 
 // Fallback if WebGL is unavailable
-const WebGLFallback: React.FC<{ pm25Level: number }> = ({ pm25Level }) => {
-  const isPolluted = pm25Level > 75;
+const WebGLFallback: React.FC<{ pm25Level: number }> = () => {
   return (
     <div
       className="fixed inset-0 pointer-events-none transition-colors duration-1000"
       style={{
         zIndex: 0,
-        background: isPolluted
-          ? 'radial-gradient(ellipse at top, rgba(239, 68, 68, 0.15) 0%, rgba(4, 28, 26, 0.98) 80%)'
-          : 'radial-gradient(ellipse at top, rgba(20, 184, 166, 0.15) 0%, rgba(4, 28, 26, 0.98) 80%)'
+        background: 'radial-gradient(ellipse at top, rgba(168, 162, 158, 0.08) 0%, rgba(249, 248, 246, 0.98) 80%)'
       }}
     />
   );
@@ -187,9 +161,7 @@ export const AmbientBackground: React.FC<AmbientBackgroundProps> = (props) => {
       <div
         className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
         style={{
-          background: pm25Level > 75
-            ? 'radial-gradient(circle at 50% 15%, rgba(239, 68, 68, 0.15) 0%, transparent 60%)'
-            : 'radial-gradient(circle at 50% 15%, rgba(20, 184, 166, 0.14) 0%, transparent 60%)'
+          background: 'radial-gradient(circle at 50% 15%, rgba(168, 162, 158, 0.07) 0%, transparent 65%)'
         }}
       />
 

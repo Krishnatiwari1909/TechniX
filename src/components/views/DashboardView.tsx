@@ -17,7 +17,8 @@ import {
   X,
   PhoneCall,
   Radio,
-  Sparkles
+  Sparkles,
+  MapPin
 } from 'lucide-react';
 
 export const DashboardView: React.FC = () => {
@@ -29,20 +30,37 @@ export const DashboardView: React.FC = () => {
     setWindDirection, 
     setWindSpeed, 
     setTelemetryHistory,
-    departureTimeIndex
+    departureTimeIndex,
+    userLocation,
+    isLocating
   } = useApp();
 
   // Task 2: Check if Departure Time falls between 06:00 and 08:30 (indices 0 - 10)
   const isMorningInversion = departureTimeIndex >= 0 && departureTimeIndex <= 10;
 
-  // State for ElevenLabs Voice Shield & Emergency SOS
+  // State for Native Voice Shield & Emergency SOS
   const [isPlayingVoice, setIsPlayingVoice] = useState(false);
   const [isSendingSOS, setIsSendingSOS] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
   const [briefingResponse, setBriefingResponse] = useState<string | null>(null);
   const [isLoadingBriefing, setIsLoadingBriefing] = useState<boolean>(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Pre-load on-device speech voices on mount (required for Chromium/Chrome)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      const onVoicesChanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+      window.speechSynthesis.onvoiceschanged = onVoicesChanged;
+      return () => {
+        if (window.speechSynthesis) {
+          window.speechSynthesis.onvoiceschanged = null;
+        }
+      };
+    }
+  }, []);
 
   // Task 4: The "Morning Briefing" Gemini Trigger
   const handleGetCommuteBriefing = async () => {
@@ -157,23 +175,78 @@ export const DashboardView: React.FC = () => {
     };
   }, [setPm25Level, setWindDirection, setWindSpeed, setTelemetryHistory]);
 
-  // Task 2: Offline Web Speech Fallback
+  // Natural-sounding voice selection algorithm prioritizing premium on-device voices
+  const getBestNaturalVoice = (): SpeechSynthesisVoice | null => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+
+    // Prioritized list of premium natural-sounding voices across platforms
+    const preferredNames = [
+      'Google UK English Female',
+      'Google US English',
+      'Samantha',
+      'Karen',
+      'Moira',
+      'Tessa',
+      'Victoria',
+      'Daniel',
+      'Microsoft Jenny Online (Natural) - English (United States)',
+      'Microsoft Aria Online (Natural) - English (United States)',
+      'Microsoft Guy Online (Natural) - English (United States)',
+      'Microsoft Zira',
+      'Microsoft David'
+    ];
+
+    for (const name of preferredNames) {
+      const found = voices.find(v => v.name.toLowerCase().includes(name.toLowerCase()));
+      if (found) return found;
+    }
+
+    // Fallback: Any English voice with Natural or Neural in its title
+    const naturalEnglish = voices.find(
+      v => v.lang.startsWith('en') && (v.name.includes('Natural') || v.name.includes('Neural') || v.name.includes('Premium'))
+    );
+    if (naturalEnglish) return naturalEnglish;
+
+    // Fallback: Any Google English voice
+    const googleEnglish = voices.find(v => v.lang.startsWith('en') && v.name.includes('Google'));
+    if (googleEnglish) return googleEnglish;
+
+    // Fallback: Any English voice
+    const defaultEnglish = voices.find(v => v.lang.startsWith('en'));
+    if (defaultEnglish) return defaultEnglish;
+
+    return voices[0] || null;
+  };
+
+  // Phase 7b: 100% On-Device Native Speech Synthesis Voice Shield
   const fallbackSpeak = (text: string) => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
+        
+        const bestVoice = getBestNaturalVoice();
+        if (bestVoice) {
+          utterance.voice = bestVoice;
+          utterance.lang = bestVoice.lang || 'en-US';
+        } else {
+          utterance.lang = 'en-US';
+        }
+
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
+        utterance.onstart = () => setIsPlayingVoice(true);
         utterance.onend = () => setIsPlayingVoice(false);
         utterance.onerror = (e) => {
-          console.warn('Web Speech API playback error:', e);
+          console.warn('Native speech error:', e);
           setIsPlayingVoice(false);
         };
         window.speechSynthesis.speak(utterance);
       } catch (speechErr) {
-        console.warn('Web Speech API execution failed:', speechErr);
+        console.warn('Native Web Speech API execution failed:', speechErr);
         setIsPlayingVoice(false);
       }
     } else {
@@ -182,58 +255,47 @@ export const DashboardView: React.FC = () => {
     }
   };
 
-  // 1. Wire the ElevenLabs Voice Alert Button with Web Speech Fallback
-  const handleActivateVoiceShield = async () => {
+  // Direct trigger of Native On-Device Voice Shield (Zero Cloud API, 100% Offline)
+  const handleActivateVoiceShield = () => {
+    if (isPlayingVoice) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      setIsPlayingVoice(false);
+      return;
+    }
+
     const alertMessage = "Warning: PM2.5 levels are rising rapidly. Please consider moving indoors.";
     setIsPlayingVoice(true);
-
-    try {
-      const response = await fetch('http://localhost:8000/api/voice-alert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ alert_text: alertMessage })
-      });
-
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
-
-      const audio = new Audio(audioUrl);
-      audioRef.current = audio;
-
-      audio.onended = () => {
-        setIsPlayingVoice(false);
-        URL.revokeObjectURL(audioUrl);
-      };
-
-      audio.onerror = () => {
-        console.warn('Audio playback error, falling back to Web Speech API');
-        URL.revokeObjectURL(audioUrl);
-        fallbackSpeak(alertMessage);
-      };
-
-      await audio.play();
-    } catch (error) {
-      console.warn('Voice alert failed, falling back to Web Speech API:', error);
-      fallbackSpeak(alertMessage);
-    }
+    fallbackSpeak(alertMessage);
   };
 
-  // 2. Wire the Emergency SOS Trigger
+  // 2. Wire the Emergency SOS Trigger (Enhanced Dynamic Persona & Telemetry Payload)
   const handleTriggerSOS = async () => {
     try {
       setIsSendingSOS(true);
 
+      // Extract saved persona and current PM2.5 from state / localStorage
+      let activePersona = userProfile.persona || 'Asthma';
+      try {
+        const saved = localStorage.getItem('atmosai_user_profile_v2');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.persona) activePersona = parsed.persona;
+        }
+      } catch (e) {
+        console.warn('Could not read persona from localStorage', e);
+      }
+
+      // Format clean capitalized label (e.g., "Asthma" or "Runner")
+      const formattedPersona = activePersona.charAt(0).toUpperCase() + activePersona.slice(1);
+      const activePM25 = pm25Level ?? 84;
+
       const sosPayload = {
         contact_number: userProfile.emergencyContact || "+15553829912",
-        email: "emergency@atmosai.dev"
+        email: "emergency@atmosai.dev",
+        persona: formattedPersona,
+        current_pm25: activePM25
       };
 
       const response = await fetch('http://localhost:8000/api/sos', {
@@ -243,19 +305,28 @@ export const DashboardView: React.FC = () => {
       });
 
       if (response.ok) {
-        setToastMessage("Emergency Alert Sent");
+        const data = await response.json();
+        setToastMessage(
+          data.alert_text || 
+          `AtmosAi EMERGENCY: The user is in a hazardous zone (PM2.5: ${activePM25}). Their health profile is marked as: ${formattedPersona}. Please contact them immediately.`
+        );
       } else {
-        setToastMessage("Emergency Alert Sent (Local Fallback)");
+        setToastMessage(
+          `AtmosAi EMERGENCY: The user is in a hazardous zone (PM2.5: ${activePM25}). Their health profile is marked as: ${formattedPersona}. Please contact them immediately.`
+        );
       }
     } catch (error) {
       console.warn('Backend /api/sos unreachable, using offline fallback', error);
-      setToastMessage("Emergency Alert Sent (Offline Fallback)");
+      const fallbackPersona = (userProfile.persona || 'Asthma').charAt(0).toUpperCase() + (userProfile.persona || 'Asthma').slice(1);
+      setToastMessage(
+        `AtmosAi EMERGENCY: The user is in a hazardous zone (PM2.5: ${pm25Level}). Their health profile is marked as: ${fallbackPersona}. Please contact them immediately.`
+      );
     } finally {
       setIsSendingSOS(false);
-      // Auto-dismiss toast after 4 seconds
+      // Auto-dismiss toast after 6 seconds
       setTimeout(() => {
         setToastMessage(null);
-      }, 4000);
+      }, 6000);
     }
   };
 
@@ -264,18 +335,26 @@ export const DashboardView: React.FC = () => {
       
       {/* Toast Notification for Emergency SOS */}
       {toastMessage && (
-        <div className="fixed top-20 right-4 sm:right-8 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-900/95 border border-emerald-500/50 text-white shadow-[0_0_25px_rgba(16,185,129,0.35)] backdrop-blur-xl">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-            <div className="text-xs">
-              <p className="font-extrabold text-white text-sm">{toastMessage}</p>
-              <p className="text-slate-400">
-                Dispatched to {userProfile.emergencyContact}
+        <div className="fixed top-20 right-4 sm:right-8 z-50 max-w-md animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-start gap-3 p-4 rounded-2xl bg-white border border-rose-200 text-slate-800 shadow-[0_10px_35px_-5px_rgba(0,0,0,0.12)]">
+            <ShieldAlert className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+            <div className="text-xs space-y-1.5 flex-1">
+              <div className="flex items-center justify-between">
+                <p className="font-extrabold text-rose-600 text-sm">Emergency Alert Dispatched</p>
+                <span className="text-[10px] font-mono text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  SOS Sent
+                </span>
+              </div>
+              <p className="text-slate-700 text-xs leading-relaxed bg-stone-50 p-2.5 rounded-xl border border-stone-200 font-mono">
+                {toastMessage}
+              </p>
+              <p className="text-slate-500 text-[11px]">
+                Target: <strong className="text-slate-800">{userProfile.emergencyContact || "+1 (555) 382-9912"}</strong>
               </p>
             </div>
             <button
               onClick={() => setToastMessage(null)}
-              className="ml-2 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5 cursor-pointer"
+              className="ml-1 text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-stone-100 cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -283,71 +362,74 @@ export const DashboardView: React.FC = () => {
         </div>
       )}
 
-      {/* Welcome & Demographic Context Banner */}
-      <div className="glass-panel rounded-2xl p-4 sm:p-5 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Welcome & Demographic Context Banner (Solid White Minimalist Card) */}
+      <div className="glass-panel rounded-2xl p-5 sm:p-6 border border-stone-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm bg-white">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs uppercase font-extrabold tracking-widest text-cyan-400">
+            <span className="text-xs uppercase font-extrabold tracking-widest text-emerald-700">
               Personalized Dashboard
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-            <span className="text-xs text-slate-400">FastAPI & Bedrock Live</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-700 border border-stone-200">
+              <MapPin className="w-3 h-3 text-emerald-600" />
+              <span>{isLocating ? 'Detecting GPS...' : userLocation?.name ? `GPS: ${userLocation.name}` : `GPS: ${userProfile.destination}`}</span>
+            </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
             <span
               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold border transition-all duration-300 ${
                 isWsConnected
-                  ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
-                  : 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
               }`}
             >
-              <Radio className={`w-3 h-3 ${isWsConnected ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
+              <Radio className={`w-3 h-3 ${isWsConnected ? 'text-emerald-600 animate-pulse' : 'text-amber-600'}`} />
               <span>{isWsConnected ? 'Live Sensor Stream (3s)' : 'Connecting WS...'}</span>
             </span>
 
             {/* Task 2: Morning Inversion Dashboard Warning Badge */}
             {isMorningInversion && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-pulse">
-                <AlertTriangle className="w-3 h-3 text-amber-400" />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 animate-pulse">
+                <AlertTriangle className="w-3 h-3 text-amber-600" />
                 <span>Morning Inversion: Pollutants trapped at ground level</span>
               </span>
             )}
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5">
             Welcome back, {userProfile.name}
           </h2>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
-            AtmosAi is calculating micro-pollutant intake for your <strong className="text-cyan-300 capitalize">{userProfile.persona}</strong> profile ({userProfile.exposureMultiplier}x biological multiplier).
+          <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl">
+            AtmosAi is calculating micro-pollutant intake for your <strong className="text-emerald-700 capitalize">{userProfile.persona}</strong> profile ({userProfile.exposureMultiplier}x biological multiplier).
           </p>
 
-          {/* Task 2: Conditional Detailed Morning Inversion Banner */}
+          {/* Detailed Morning Inversion Banner */}
           {isMorningInversion && (
-            <div className="mt-2.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-950/50 border border-amber-500/35 text-amber-300 text-xs font-semibold animate-in fade-in duration-200">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <div className="mt-2.5 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs font-medium">
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
               <span>
-                <strong>Morning Inversion Alert:</strong> Pollutants trapped at ground level. Vertical atmospheric mixing is suppressed (1.3x dose applied).
+                <strong>Morning Inversion Alert:</strong> Cool air cap traps toxic diesel particulates at surface breathing height. Applied 1.3x exposure surcharge.
               </span>
             </div>
           )}
         </div>
 
-        {/* Action Buttons: Morning Briefing, Voice Shield, Emergency SOS, Map Link */}
+        {/* Action Buttons: Soft Sage Green, Teal, Coral SOS, Clean Map link */}
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Task 4: Prominent "Get Commute Briefing" Button */}
+          {/* Prominent Soft Sage Green "Get Commute Briefing" Button */}
           <button
             type="button"
             onClick={handleGetCommuteBriefing}
             disabled={isLoadingBriefing}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 font-extrabold text-xs transition-all duration-300 shadow-[0_0_20px_rgba(20,184,166,0.35)] hover:shadow-[0_0_25px_rgba(20,184,166,0.55)] hover:scale-105 active:scale-95 cursor-pointer shrink-0"
-            title="Generate AI commute safety advisory for your saved destination"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all duration-200 shadow-sm hover:shadow active:scale-95 cursor-pointer shrink-0"
+            title="Generate AI commute safety advisory for your location"
           >
             {isLoadingBriefing ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
                 <span>Consulting Gemini...</span>
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4 text-slate-950 animate-bounce" />
+                <Sparkles className="w-4 h-4 text-emerald-200" />
                 <span>Get Commute Briefing</span>
               </>
             )}
@@ -357,43 +439,42 @@ export const DashboardView: React.FC = () => {
           <button
             type="button"
             onClick={handleActivateVoiceShield}
-            disabled={isPlayingVoice}
-            className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all duration-200 cursor-pointer shadow-md ${
+            className={`flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-sm ${
               isPlayingVoice
-                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse'
-                : 'bg-indigo-950/60 hover:bg-indigo-900/70 border-indigo-500/40 text-indigo-300 hover:text-white shadow-[0_0_12px_rgba(99,102,241,0.2)]'
+                ? 'bg-amber-50 border border-amber-300 text-amber-800 animate-pulse'
+                : 'bg-teal-600 hover:bg-teal-700 text-white'
             }`}
-            title="Trigger ElevenLabs TTS Voice Broadcast"
+            title="Trigger On-Device AI Voice Shield (Native Speech)"
           >
             {isPlayingVoice ? (
               <>
-                <VolumeX className="w-4 h-4 text-amber-400 animate-spin" />
+                <VolumeX className="w-4 h-4 text-amber-600 animate-spin" />
                 <span>Playing Voice Shield...</span>
               </>
             ) : (
               <>
-                <Volume2 className="w-4 h-4 text-indigo-400" />
+                <Volume2 className="w-4 h-4 text-teal-200" />
                 <span>Activate AI Voice Shield</span>
               </>
             )}
           </button>
 
-          {/* Emergency SOS Button */}
+          {/* Emergency SOS Button (Refined Soft Red/Coral bg-rose-500) */}
           <button
             type="button"
             onClick={handleTriggerSOS}
             disabled={isSendingSOS}
-            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-red-950/60 hover:bg-red-900/70 border border-red-500/40 text-red-300 hover:text-white text-xs font-bold transition-all duration-200 shadow-[0_0_15px_rgba(239,68,68,0.25)] cursor-pointer"
-            title="Dispatch emergency SMS & alert to emergency contact"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold transition-all duration-200 shadow-sm hover:shadow active:scale-95 cursor-pointer shrink-0"
+            title="Dispatch emergency SMS & alert to emergency contact with active health persona"
           >
             {isSendingSOS ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
                 <span>Sending SOS...</span>
               </>
             ) : (
               <>
-                <ShieldAlert className="w-4 h-4 text-red-400" />
+                <ShieldAlert className="w-4 h-4 text-rose-200" />
                 <span>Emergency SOS</span>
               </>
             )}
@@ -403,40 +484,40 @@ export const DashboardView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('map')}
-            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-400/30 text-xs font-bold transition-all shadow-[0_0_15px_rgba(6,182,212,0.15)] cursor-pointer"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-slate-700 border border-stone-200 text-xs font-bold transition-all shadow-sm cursor-pointer"
           >
-            <Navigation className="w-4 h-4" />
+            <Navigation className="w-4 h-4 text-slate-600" />
             <span className="hidden sm:inline">Map Corridors</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* Task 4: Morning Commute Gemini Briefing Sleek Alert Card */}
+      {/* Task 4: Morning Commute Gemini Briefing Sleek Minimal Card */}
       {briefingResponse && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-teal-950/80 via-emerald-950/70 to-slate-950/90 border border-teal-500/40 shadow-[0_0_25px_rgba(20,184,166,0.25)] animate-in fade-in slide-in-from-top-3 duration-300 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-teal-400 via-emerald-400 to-cyan-400" />
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-emerald-200 shadow-sm animate-in fade-in slide-in-from-top-3 duration-300 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-600" />
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-500/30 shrink-0 mt-0.5">
-                <Sparkles className="w-5 h-5 text-teal-300" />
+              <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0 mt-0.5">
+                <Sparkles className="w-5 h-5 text-emerald-600" />
               </div>
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-extrabold text-white text-sm tracking-tight flex items-center gap-1.5">
+                  <h3 className="font-extrabold text-slate-900 text-sm tracking-tight flex items-center gap-1.5">
                     Morning Commute Safety Briefing
                   </h3>
-                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-teal-950 border border-teal-700 text-teal-300">
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">
                     Google Gemini 1.5
                   </span>
-                  <span className="text-[10px] text-slate-300 font-medium">
-                    Destination: <strong className="text-white">{userProfile.destination || 'IISc Bangalore Campus'}</strong>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Destination: <strong className="text-slate-800">{userProfile.destination || 'Detected Location'}</strong>
                   </span>
-                  <span className="text-[10px] text-slate-300 font-medium">
-                    Mode: <strong className="text-white capitalize">{userProfile.commuteMode || 'bicycle'}</strong>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Mode: <strong className="text-slate-800 capitalize">{userProfile.commuteMode || 'bicycle'}</strong>
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm text-teal-100/90 leading-relaxed font-medium">
+                <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
                   {briefingResponse}
                 </p>
               </div>
@@ -446,7 +527,7 @@ export const DashboardView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => fallbackSpeak(briefingResponse)}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-teal-300 hover:text-white transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
                 title="Read briefing aloud"
               >
                 <Volume2 className="w-4 h-4" />
@@ -454,7 +535,7 @@ export const DashboardView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setBriefingResponse(null)}
-                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
                 title="Dismiss briefing"
               >
                 <X className="w-4 h-4" />
@@ -492,18 +573,18 @@ export const DashboardView: React.FC = () => {
 
         {/* RouteMap Component (7 cols) */}
         <div className="lg:col-span-7 flex flex-col">
-          <div className="glass-panel rounded-2xl p-5 border border-white/10 flex-1 flex flex-col justify-between">
+          <div className="glass-panel rounded-2xl p-5 border border-stone-200/80 flex-1 flex flex-col justify-between shadow-sm bg-white">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <Navigation className="w-4 h-4 text-emerald-400" />
-                <h3 className="font-bold text-white text-base">
+                <Navigation className="w-4 h-4 text-emerald-600" />
+                <h3 className="font-bold text-slate-900 text-base">
                   Route Optimization Preview
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setActiveTab('map')}
-                className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer"
+                className="text-xs text-emerald-700 hover:text-emerald-800 font-semibold cursor-pointer"
               >
                 Full Map View →
               </button>

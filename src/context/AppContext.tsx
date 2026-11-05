@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, PersonaType, CommuteMode } from '../types';
 import { PERSONA_CONFIGS } from '../data/mockData';
 
@@ -24,6 +24,9 @@ interface AppContextType {
   setChatOpen: (open: boolean) => void;
   selectedRouteId: string;
   setSelectedRouteId: (id: string) => void;
+  userLocation: { lat: number; lng: number; name?: string } | null;
+  setUserLocation: (loc: { lat: number; lng: number; name?: string } | null) => void;
+  isLocating: boolean;
 }
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -76,6 +79,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
   const [chatOpen, setChatOpen] = useState<boolean>(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string>('route-clean');
+  
+  // Task 1: Auto-Geolocation state
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; name?: string } | null>(null);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
@@ -86,6 +93,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     return DEFAULT_PROFILE;
   });
+
+  // Task 1: Auto-Geolocation on mount with real-time Open-Meteo local PM2.5 fetch
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          setUserLocation({ lat: latitude, lng: longitude });
+
+          try {
+            // 1. Fetch real-time localized PM2.5 from Open-Meteo Air Quality API
+            const aqiRes = await fetch(
+              `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}&current=pm2_5`
+            );
+            if (aqiRes.ok) {
+              const aqiData = await aqiRes.json();
+              if (aqiData?.current?.pm2_5 != null) {
+                const livePM = Math.round(aqiData.current.pm2_5);
+                setPm25Level(livePM);
+                setTelemetryHistory(prev => [
+                  ...prev.slice(-9),
+                  { time: 'Live GPS', pm25: livePM }
+                ]);
+              }
+            }
+
+            // 2. Reverse geocode to get locality name and override manual wizard selection
+            const geoRes = await fetch(
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+            );
+            if (geoRes.ok) {
+              const geoData = await geoRes.json();
+              const placeName = geoData.locality || geoData.city || geoData.principalSubdivision || 'Detected Location';
+              setUserLocation(prev => prev ? { ...prev, name: placeName } : null);
+              setUserProfile(prev => {
+                const updated = { ...prev, destination: placeName };
+                try {
+                  localStorage.setItem('atmosai_user_profile_v2', JSON.stringify(updated));
+                } catch (e) {
+                  console.warn('Could not persist updated location to localStorage', e);
+                }
+                return updated;
+              });
+            }
+          } catch (err) {
+            console.warn('[Auto-Geolocation] Environmental fetch failed, using localized telemetry:', err);
+          } finally {
+            setIsLocating(false);
+          }
+        },
+        (error) => {
+          console.warn('[Auto-Geolocation] Location permission or device unavailable:', error.message);
+          setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      );
+    }
+  }, []);
 
   const calculateMultiplier = (persona: PersonaType, mode: CommuteMode, sensitivities: string[]): number => {
     let base = PERSONA_CONFIGS[persona]?.baseMultiplier || 1.5;
@@ -140,7 +206,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         chatOpen,
         setChatOpen,
         selectedRouteId,
-        setSelectedRouteId
+        setSelectedRouteId,
+        userLocation,
+        setUserLocation,
+        isLocating
       }}
     >
       {children}

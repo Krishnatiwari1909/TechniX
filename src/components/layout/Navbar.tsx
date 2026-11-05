@@ -6,24 +6,24 @@ export const Navbar: React.FC = () => {
   const { userProfile, pm25Level, setShowOnboarding } = useApp();
 
   return (
-    <header className="sticky top-0 z-30 w-full glass-panel border-b border-white/10 px-4 sm:px-6 pt-safe pb-3">
+    <header className="sticky top-0 z-30 w-full bg-white/85 backdrop-blur-md border-b border-stone-200/80 px-4 sm:px-6 pt-safe pb-3">
       <div className="flex items-center justify-between max-w-7xl mx-auto">
         
         {/* Brand */}
         <div className="flex items-center gap-2.5">
-          <div className="md:hidden w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-slate-950 font-black shadow-[0_0_12px_rgba(6,182,212,0.5)]">
-            <Wind className="w-4 h-4 text-slate-950" />
+          <div className="md:hidden w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white font-bold shadow-sm">
+            <Wind className="w-4 h-4 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-base sm:text-lg text-white tracking-tight">
+              <span className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight">
                 AtmosAi
               </span>
-              <span className="text-[10px] uppercase font-bold text-cyan-400 font-mono hidden sm:inline px-1.5 py-0.2 rounded bg-cyan-950/80 border border-cyan-800">
+              <span className="text-[10px] uppercase font-bold text-emerald-700 font-mono hidden sm:inline px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200">
                 PWA Core
               </span>
             </div>
-            <p className="text-[10px] text-slate-400 hidden sm:block">
+            <p className="text-[10px] text-slate-500 hidden sm:block">
               Intelligent Air Quality & Demographic Protection
             </p>
           </div>
@@ -33,33 +33,33 @@ export const Navbar: React.FC = () => {
         <div className="flex items-center gap-2 sm:gap-3">
           
           {/* Live PM2.5 Chip */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-white/10 text-xs shadow-sm">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-50 border border-stone-200 text-xs shadow-sm">
             <span
               className={`w-2 h-2 rounded-full ${
-                pm25Level > 75 ? 'bg-red-400 animate-ping' : 'bg-cyan-400 animate-pulse'
+                pm25Level > 75 ? 'bg-rose-500 animate-ping' : 'bg-emerald-500 animate-pulse'
               }`}
             />
-            <span className="text-slate-400 hidden sm:inline">Telemetry:</span>
-            <span className={`font-mono font-bold ${pm25Level > 75 ? 'text-red-400' : 'text-cyan-300'}`}>
+            <span className="text-slate-500 hidden sm:inline">Telemetry:</span>
+            <span className={`font-mono font-bold ${pm25Level > 75 ? 'text-rose-600' : 'text-emerald-700'}`}>
               {pm25Level} µg/m³
             </span>
           </div>
 
           {/* Active Persona Pill */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-950/40 border border-cyan-500/30 text-xs font-semibold text-cyan-300">
-            <Activity className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-800">
+            <Activity className="w-3.5 h-3.5 text-emerald-600" />
             <span className="capitalize">{userProfile.persona}</span>
-            <span className="text-[10px] text-cyan-400/80 font-mono">({userProfile.exposureMultiplier}x)</span>
+            <span className="text-[10px] text-emerald-600 font-mono">({userProfile.exposureMultiplier}x)</span>
           </div>
 
           {/* Setup Wizard Trigger */}
           <button
             type="button"
             onClick={() => setShowOnboarding(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-medium transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-slate-700 border border-stone-200 text-xs font-medium transition-all cursor-pointer"
             title="Setup Wizard"
           >
-            <Settings2 className="w-3.5 h-3.5 text-cyan-400" />
+            <Settings2 className="w-3.5 h-3.5 text-slate-600" />
             <span className="hidden sm:inline">Setup Wizard</span>
           </button>
 

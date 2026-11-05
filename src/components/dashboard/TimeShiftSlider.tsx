@@ -41,7 +41,7 @@ export const TimeShiftSlider: React.FC = () => {
   const currentStep = TIME_STEPS[departureTimeIndex] || TIME_STEPS[8];
   const maxStepPM25 = 170;
 
-  // Task 2: Diurnal Inversion Simulation (1.3x multiplier for 06:00 - 08:30)
+  // Diurnal Inversion Simulation (1.3x multiplier for 06:00 - 08:30)
   const isMorningInversion = isMorningInversionTime(currentStep.label);
   const inversionMultiplier = isMorningInversion ? 1.3 : 1.0;
 
@@ -55,11 +55,11 @@ export const TimeShiftSlider: React.FC = () => {
     const peakInhaled = Math.round((maxStepPM25 * 0.45 * multiplier * 1.3) * 10) / 10;
     const reductionPercent = Math.max(0, Math.round(((peakInhaled - inhaledMicrograms) / peakInhaled) * 100));
 
-    let badgeColor = 'text-emerald-400 bg-emerald-950/60 border-emerald-500/30';
+    let badgeColor = 'text-emerald-800 bg-emerald-50 border-emerald-200';
     if (rawPM > 140) {
-      badgeColor = 'text-red-400 bg-red-950/60 border-red-500/30';
+      badgeColor = 'text-rose-800 bg-rose-50 border-rose-200';
     } else if (rawPM > 85) {
-      badgeColor = 'text-amber-400 bg-amber-950/60 border-amber-500/30';
+      badgeColor = 'text-amber-800 bg-amber-50 border-amber-300';
     }
 
     return {
@@ -78,13 +78,13 @@ export const TimeShiftSlider: React.FC = () => {
   };
 
   return (
-    <div className="glass-panel rounded-2xl p-5 sm:p-6 border border-white/10 flex flex-col justify-between space-y-5">
+    <div className="bg-white rounded-2xl p-5 sm:p-6 border border-stone-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between space-y-5">
       {/* EXPECTED EXPOSURE METRIC CARD */}
-      <div className="relative p-5 rounded-2xl bg-gradient-to-br from-slate-900/90 via-slate-900/60 to-slate-950/90 border border-white/10 overflow-hidden shadow-lg">
+      <div className="relative p-5 rounded-2xl bg-stone-50 border border-stone-200/80 overflow-hidden shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs uppercase font-extrabold tracking-wider text-slate-400">
+              <span className="text-xs uppercase font-extrabold tracking-wider text-slate-500">
                 Expected Exposure Metric
               </span>
               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${exposureMetrics.badgeColor}`}>
@@ -92,48 +92,48 @@ export const TimeShiftSlider: React.FC = () => {
               </span>
             </div>
 
-            {/* Task 2: Diurnal Inversion Warning Badge */}
+            {/* Diurnal Inversion Warning Badge */}
             {exposureMetrics.isMorningInversion && (
-              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/15 border border-amber-500/35 text-amber-300 text-[11px] font-bold animate-in fade-in duration-200">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-[11px] font-bold animate-in fade-in duration-200">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                 <span>Morning Inversion: Pollutants trapped at ground level (1.3x)</span>
               </div>
             )}
 
             <div className="flex items-baseline gap-3 mt-1.5">
-              <span className="text-4xl sm:text-5xl font-black text-white font-mono tracking-tight">
+              <span className="text-4xl sm:text-5xl font-black text-slate-900 font-mono tracking-tight">
                 {exposureMetrics.inhaledMicrograms}
-                <span className="text-lg font-bold text-slate-400 ml-1">µg</span>
+                <span className="text-lg font-bold text-slate-500 ml-1">µg</span>
               </span>
-              <div className="flex items-center gap-1 text-emerald-400 text-sm font-semibold">
+              <div className="flex items-center gap-1 text-emerald-700 text-sm font-bold">
                 <ArrowDownRight className="w-4 h-4" />
                 <span>{exposureMetrics.reductionPercent}% vs Peak</span>
               </div>
             </div>
             
-            <p className="text-xs text-slate-400 mt-1">
-              Estimated alveolar deposit for your <strong className="text-slate-200 capitalize">{userProfile.persona}</strong> profile ({userProfile.exposureMultiplier}x factor).
+            <p className="text-xs text-slate-500 mt-1">
+              Estimated alveolar deposit for your <strong className="text-slate-800 capitalize">{userProfile.persona}</strong> profile ({userProfile.exposureMultiplier}x factor).
             </p>
           </div>
 
-          <div className="p-3 rounded-xl bg-white/5 border border-white/10 sm:text-right shrink-0">
-            <span className="text-[10px] text-slate-400 block uppercase font-medium">Ambient PM2.5</span>
-            <span className="text-2xl font-bold font-mono text-cyan-300">
-              {exposureMetrics.rawPM} <span className="text-xs text-slate-400">µg/m³</span>
+          <div className="p-3 rounded-xl bg-white border border-stone-200/80 sm:text-right shrink-0">
+            <span className="text-[10px] text-slate-500 block uppercase font-medium">Ambient PM2.5</span>
+            <span className="text-2xl font-bold font-mono text-emerald-700">
+              {exposureMetrics.rawPM} <span className="text-xs text-slate-500">µg/m³</span>
             </span>
           </div>
         </div>
 
         {/* Dynamic AI Recommendation banner */}
-        <div className="mt-4 pt-3 border-t border-white/10 flex items-start gap-2 text-xs">
-          <Sparkles className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-          <span className="text-slate-300">
+        <div className="mt-4 pt-3 border-t border-stone-200/80 flex items-start gap-2 text-xs">
+          <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+          <span className="text-slate-700">
             {departureTimeIndex >= 8 && departureTimeIndex <= 13 ? (
-              <span className="text-amber-300">
+              <span className="text-amber-900 font-medium">
                 <strong>Severe Inversion Warning:</strong> Leaving between 08:00 - 09:15 AM increases diesel soot intake. Shift to <strong>07:15 AM</strong> (-44% dose) or <strong>10:15 AM</strong> (-52% dose).
               </span>
             ) : (
-              <span className="text-emerald-300">
+              <span className="text-emerald-900 font-medium">
                 <strong>Clean Air Window:</strong> Outstanding departure choice! Air dispersion is active and particulate intake is down by <strong>{exposureMetrics.reductionPercent}%</strong>.
               </span>
             )}
@@ -144,11 +144,11 @@ export const TimeShiftSlider: React.FC = () => {
       {/* THE THICK, TOUCH-FRIENDLY TIME-SHIFT SLIDER */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-bold text-white flex items-center gap-2">
-            <Clock className="w-4 h-4 text-cyan-400" />
-            <span>Departure Time: <span className="text-cyan-300 font-mono text-base">{currentStep.label}</span></span>
+          <label className="text-sm font-bold text-slate-800 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-emerald-600" />
+            <span>Departure Time: <span className="text-emerald-700 font-mono text-base font-extrabold">{currentStep.label}</span></span>
           </label>
-          <span className="text-xs text-slate-400 font-medium">
+          <span className="text-xs text-slate-500 font-medium">
             Drag to compare exposure
           </span>
         </div>
@@ -167,22 +167,22 @@ export const TimeShiftSlider: React.FC = () => {
         </div>
 
         {/* Time Ticks */}
-        <div className="flex justify-between text-[10px] text-slate-400 font-mono px-1">
+        <div className="flex justify-between text-[10px] text-slate-500 font-mono px-1">
           <span>06:00 AM (Low)</span>
-          <span className="text-amber-400/80">08:30 AM (Peak Smog)</span>
+          <span className="text-amber-700 font-bold">08:30 AM (Peak Smog)</span>
           <span>10:30 AM (Dispersal)</span>
         </div>
 
         {/* Quick Shift Presets */}
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-xs text-slate-400 font-medium">Quick Shifts:</span>
+          <span className="text-xs text-slate-500 font-medium">Quick Shifts:</span>
           <button
             type="button"
             onClick={() => {
               setDepartureTimeIndex(4);
               setPm25Level(TIME_STEPS[4].pm25);
             }}
-            className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-[11px] text-slate-300 border border-white/10 font-medium transition-all"
+            className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-[11px] text-slate-700 border border-stone-200 font-medium transition-all cursor-pointer"
           >
             Early (07:00 AM)
           </button>
@@ -192,7 +192,7 @@ export const TimeShiftSlider: React.FC = () => {
               setDepartureTimeIndex(10);
               setPm25Level(TIME_STEPS[10].pm25);
             }}
-            className="px-2.5 py-1 rounded-lg bg-red-950/40 hover:bg-red-900/50 text-[11px] text-red-300 border border-red-500/20 font-medium transition-all"
+            className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-[11px] text-rose-800 border border-rose-200 font-medium transition-all cursor-pointer"
           >
             Peak Hour (08:30 AM)
           </button>
@@ -202,7 +202,7 @@ export const TimeShiftSlider: React.FC = () => {
               setDepartureTimeIndex(18);
               setPm25Level(TIME_STEPS[18].pm25);
             }}
-            className="px-2.5 py-1 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/50 text-[11px] text-emerald-300 border border-emerald-500/20 font-medium transition-all"
+            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[11px] text-emerald-800 border border-emerald-200 font-medium transition-all cursor-pointer"
           >
             Cleanest (10:30 AM)
           </button>
@@ -213,4 +213,3 @@ export const TimeShiftSlider: React.FC = () => {
 };
 
 export default TimeShiftSlider;
-
