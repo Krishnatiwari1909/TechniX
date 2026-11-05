@@ -67,6 +67,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onOpenAuth, onOpenSetup }) => {
   );
 };
 
+import { supabase } from './supabaseClient';
+
 const computeCurrentScreen = (): 'auth' | 'setup' | 'app' => {
   try {
     const hasAuth = !!localStorage.getItem('atmos_auth');
@@ -80,15 +82,30 @@ const computeCurrentScreen = (): 'auth' | 'setup' | 'app' => {
 };
 
 export const App: React.FC = () => {
-  // Phase 24 Task 1: Conditional rendering based on localStorage ('atmos_auth' & 'atmos_profile')
+  // Phase 25: Unified Supabase & App State Routing
   const [authScreen, setAuthScreen] = useState<'auth' | 'setup' | 'app'>(computeCurrentScreen);
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        localStorage.setItem('atmos_supabase_token', session.access_token);
+      }
+    }).catch(() => {});
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        localStorage.setItem('atmos_supabase_token', session.access_token);
+      }
+    });
+
     const syncRoute = () => {
       setAuthScreen(computeCurrentScreen());
     };
     window.addEventListener('storage', syncRoute);
-    return () => window.removeEventListener('storage', syncRoute);
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('storage', syncRoute);
+    };
   }, []);
 
   const handleLoginSuccess = () => {

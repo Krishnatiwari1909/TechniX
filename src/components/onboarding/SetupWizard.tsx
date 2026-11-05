@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PersonaType, CommuteMode } from '../../types';
+import { supabase } from '../../supabaseClient';
 import { 
   Activity, 
   Baby, 
@@ -57,8 +58,36 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
     });
   };
 
-  const handleSaveAndRedirect = () => {
-    // Phase 24 Task 3: Execute localStorage.setItem('atmos_profile', JSON.stringify({ commuteMode, sensitivities }))
+  const handleSaveAndRedirect = async () => {
+    // Phase 25 Task 3: Replace with Supabase database insert/update
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUser = user || (() => {
+        try {
+          const auth = JSON.parse(localStorage.getItem('atmos_auth') || '{}');
+          return auth.id ? { id: auth.id } : null;
+        } catch {
+          return null;
+        }
+      })();
+
+      if (currentUser?.id) {
+        const { data, error } = await supabase.from('profiles').upsert({
+          user_id: currentUser.id,
+          commute_mode: commuteMode,
+          sensitivities: sensitivities,
+          name: userName || userProfile.name || 'Commuter',
+          updated_at: new Date().toISOString()
+        });
+
+        if (error) {
+          console.warn('[SetupWizard] Supabase profiles upsert notice:', error);
+        }
+      }
+    } catch (dbErr) {
+      console.warn('[SetupWizard] Supabase insert warning:', dbErr);
+    }
+
     const wizardData = {
       commuteMode,
       sensitivities,

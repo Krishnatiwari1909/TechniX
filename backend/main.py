@@ -12,7 +12,7 @@ from typing import Optional, Dict, Any, List
 from pathlib import Path
 from datetime import datetime, timedelta
 
-from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect, Query
+from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect, Query, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -22,6 +22,7 @@ import httpx
 import joblib
 import pandas as pd
 import numpy as np
+from supabase import create_client, Client
 
 # Load unified environment variables from project root (.env)
 base_dir = Path(__file__).resolve().parent
@@ -32,6 +33,65 @@ for candidate in [
     if candidate.exists():
         load_dotenv(dotenv_path=candidate, override=True)
 load_dotenv()
+
+# ==============================================================================
+# Phase 25 Task 1: Supabase Backend Client Initialization
+# ==============================================================================
+SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL") or ""
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or os.getenv("VITE_SUPABASE_ANON_KEY") or ""
+
+supabase: Optional[Client] = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print(f"[Supabase] Backend client successfully initialized for: {SUPABASE_URL}")
+    except Exception as e_sb:
+        print(f"[Supabase] Backend initialization notice: {e_sb}")
+
+async def verify_supabase_user(authorization: Optional[str] = Header(None)) -> Dict[str, Any]:
+    """
+    Phase 25 Task 4: Secure FastAPI Endpoints.
+    Verifies user's Supabase JWT token from Authorization header ('Bearer <token>').
+    """
+    if not authorization:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Authorization header"
+        )
+
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Authorization header format. Expected 'Bearer <token>'"
+        )
+
+    token = parts[1]
+    if not supabase:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase client not configured on server"
+        )
+
+    try:
+        user_res = supabase.auth.get_user(token)
+        if not user_res or not user_res.user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired Supabase token"
+            )
+        return {
+            "id": user_res.user.id,
+            "email": user_res.user.email,
+            "user_metadata": user_res.user.user_metadata or {}
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Token verification failed: {str(e)}"
+        )
 
 # ==============================================================================
 # Machine Learning Model: LightGBM Inversion Regressor
@@ -545,6 +605,66 @@ async def calculate_exposure_get(
         traffic_volume=traffic_volume,
         temperature=temperature
     )
+
+# ==============================================================================
+# Phase 25 Task 4: Secure Supabase Endpoints (JWT Verification)
+# ==============================================================================
+
+@app.get("/api/user/profile")
+async def get_secure_user_profile(user: Dict[str, Any] = Depends(verify_supabase_user)):
+    """
+    Secure endpoint: Requires valid Supabase JWT token.
+    Retrieves the authenticated user's profile from Supabase database.
+    """
+    if not supabase:
+        return {"status": "success", "user": user, "profile": None}
+
+    try:
+        response = supabase.from_("profiles").select("*").eq("user_id", user["id"]).maybe_single().execute()
+        return {
+            "status": "success",
+            "user": user,
+            "profile": response.data if response else None
+        }
+    except Exception as e:
+        return {
+            "status": "success",
+            "user": user,
+            "profile": None,
+            "note": str(e)
+        }
+
+@app.post("/api/user/profile")
+async def save_secure_user_profile(
+    profile_data: Dict[str, Any],
+    user: Dict[str, Any] = Depends(verify_supabase_user)
+):
+    """
+    Secure endpoint: Requires valid Supabase JWT token to write or update user profile.
+    """
+    if not supabase:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase client not available on server"
+        )
+
+    try:
+        record = {
+            "user_id": user["id"],
+            **profile_data,
+            "updated_at": datetime.utcnow().isoformat()
+        }
+        response = supabase.from_("profiles").upsert(record).execute()
+        return {
+            "status": "success",
+            "user_id": user["id"],
+            "data": response.data
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Database write failed: {str(e)}"
+        )
 
 # ==============================================================================
 # Phase 11 Task 1: 3-Hour LightGBM Inversion Forecast Endpoint (/api/forecast)

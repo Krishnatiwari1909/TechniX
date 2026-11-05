@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from '../../supabaseClient';
 import { Wind, Mail, Lock, User, ArrowRight, Sparkles, AlertCircle, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 interface AuthProps {
@@ -29,20 +30,100 @@ export const Auth: React.FC<AuthProps> = ({
     const effectiveName = fullName.trim() || email.split('@')[0] || 'Commuter';
     const effectiveEmail = email.trim();
 
-    // Phase 24 Task 2: When user enters Name and Email and clicks "Sign Up & Setup Profile"
-    localStorage.setItem('atmos_auth', JSON.stringify({ name: fullName.trim() || effectiveName, email: effectiveEmail }));
+    try {
+      if (isSignUp) {
+        // Phase 25 Task 2: Live Supabase Sign Up
+        const { data, error } = await supabase.auth.signUp({
+          email: effectiveEmail,
+          password,
+          options: {
+            data: {
+              full_name: effectiveName
+            }
+          }
+        });
 
-    setLoading(false);
-    if (isSignUp) {
-      // Instantly redirect to Setup Wizard
-      onSignUpSuccess();
-    } else {
-      const hasProfile = !!localStorage.getItem('atmos_profile');
-      if (hasProfile) {
-        onLoginSuccess();
-      } else {
+        if (error) {
+          throw error;
+        }
+
+        // Store session token and user info
+        if (data.session) {
+          localStorage.setItem('atmos_supabase_token', data.session.access_token);
+        }
+        localStorage.setItem(
+          'atmos_auth',
+          JSON.stringify({
+            id: data.user?.id,
+            name: effectiveName,
+            email: effectiveEmail,
+            token: data.session?.access_token || null,
+            isLoggedIn: true
+          })
+        );
+        localStorage.setItem('atmosai_authenticated', 'true');
+
+        setLoading(false);
+        // Direct new user to the Setup Wizard
         onSignUpSuccess();
+      } else {
+        // Phase 25 Task 2: Live Supabase Sign In for returning users
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: effectiveEmail,
+          password
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (data.session) {
+          localStorage.setItem('atmos_supabase_token', data.session.access_token);
+        }
+
+        const nameFromUser = data.user?.user_metadata?.full_name || effectiveName;
+        localStorage.setItem(
+          'atmos_auth',
+          JSON.stringify({
+            id: data.user?.id,
+            name: nameFromUser,
+            email: effectiveEmail,
+            token: data.session?.access_token || null,
+            isLoggedIn: true
+          })
+        );
+        localStorage.setItem('atmosai_authenticated', 'true');
+
+        // Check if user has an existing profile in Supabase database
+        let hasProfile = false;
+        try {
+          if (data.user?.id) {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', data.user.id)
+              .maybeSingle();
+
+            if (profileData) {
+              hasProfile = true;
+              localStorage.setItem('atmos_profile', JSON.stringify(profileData));
+            }
+          }
+        } catch (dbErr) {
+          console.warn('[Auth] Check profile warning:', dbErr);
+        }
+
+        setLoading(false);
+        if (hasProfile || localStorage.getItem('atmos_profile')) {
+          onLoginSuccess();
+        } else {
+          onSignUpSuccess();
+        }
       }
+    } catch (err: any) {
+      console.error('[Supabase Auth Error]:', err);
+      setErrorMessage(err.message || 'Authentication failed. Please verify credentials.');
+      setLoading(false);
     }
   };
 
