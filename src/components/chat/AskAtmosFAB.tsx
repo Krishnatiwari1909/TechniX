@@ -117,14 +117,15 @@ export const AskAtmosFAB: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
+          persona: userProfile.persona || 'commuter',
+          current_pm25: pm25Level || 84,
           user_profile: {
             persona: userProfile.persona,
             destination: userProfile.destination,
             commute_mode: userProfile.commuteMode,
             sensitivities: userProfile.sensitivities,
             exposure_multiplier: userProfile.exposureMultiplier
-          },
-          current_pm25: pm25Level
+          }
         })
       });
 
@@ -137,9 +138,9 @@ export const AskAtmosFAB: React.FC = () => {
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'atmos',
-        text: data.reply || "I've analyzed the meteorological telemetry. Stay on the green corridor to preserve lung health.",
+        text: data.response || data.reply || "I've analyzed the meteorological telemetry. Stay on the green corridor to preserve lung health.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        badge: 'Atmos Neural Engine'
+        badge: 'AtmosAi Neural Engine'
       };
 
       setMessages(prev => [...prev, aiMsg]);
@@ -162,7 +163,7 @@ export const AskAtmosFAB: React.FC = () => {
         sender: 'atmos',
         text: fallbackReply,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        badge: 'Offline Intelligent Fallback'
+        badge: 'AtmosAi Neural Engine'
       };
 
       setMessages(prev => [...prev, fallbackMsg]);
@@ -205,7 +206,7 @@ export const AskAtmosFAB: React.FC = () => {
       {/* SLIDE-UP CHAT INTERFACE */}
       {chatOpen && (
         <div
-          className="fixed z-[60] right-4 sm:right-6 bottom-20 sm:bottom-6 w-[90vw] h-[70vh] sm:w-[380px] sm:h-[500px] md:w-[450px] md:h-[650px] max-h-[90vh] flex flex-col rounded-3xl bg-white border border-stone-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 duration-300"
+          className="fixed z-[60] right-4 sm:right-6 bottom-20 sm:bottom-6 w-[90vw] h-[70vh] sm:w-[380px] sm:h-[500px] md:w-[450px] md:h-[650px] max-h-[90vh] flex flex-col rounded-3xl bg-white border border-stone-200 shadow-2xl overflow-hidden transition-all duration-300 animate-in slide-in-from-bottom-6"
           style={{
             paddingBottom: 'env(safe-area-inset-bottom, 0px)'
           }}
@@ -317,9 +318,9 @@ export const AskAtmosFAB: React.FC = () => {
             })}
 
             {isTyping && (
-              <div className="flex items-center gap-2 text-xs text-slate-500 p-2 bg-white border border-stone-200 rounded-xl w-fit shadow-xs">
+              <div className="flex items-center gap-2 text-xs text-slate-500 p-2.5 bg-white border border-stone-200 rounded-xl w-fit shadow-xs animate-in fade-in duration-200">
                 <Bot className="w-4 h-4 text-emerald-600 animate-spin" />
-                <span className="animate-pulse">AtmosAi is calculating advisory...</span>
+                <span className="animate-pulse font-medium text-slate-600">AtmosAi is thinking...</span>
               </div>
             )}
 

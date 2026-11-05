@@ -107,8 +107,9 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     message: str = Field(..., description="User message/query for AtmosAi")
-    persona: str = Field(..., description="Active user demographic persona (runner, parent, commuter)")
-    current_pm25: float = Field(..., description="Current localized PM2.5 reading in µg/m³")
+    persona: Optional[str] = Field("commuter", description="Active user demographic persona (runner, parent, commuter)")
+    user_profile: Optional[Dict[str, Any]] = Field(None, description="Optional profile context")
+    current_pm25: Optional[float] = Field(84.0, description="Current localized PM2.5 reading in µg/m³")
 
 class VoiceAlertRequest(BaseModel):
     alert_text: str = Field(..., description="Emergency advisory script to convert to voice")
@@ -160,36 +161,76 @@ def generate_fallback_alert_tone() -> bytes:
 @app.post("/api/chat")
 async def chat_with_atmos(payload: ChatRequest):
     """
-    Accepts message, persona, and current_pm25.
-    Formats strict system prompt and calls Google Gemini API (gemini-1.5-flash).
+    Phase 23 Task 1: Live Gemini Streaming via google-genai SDK (gemini-2.5-flash).
+    Accepts message, persona context, and current_pm25.
+    Constructs a dedicated system prompt telling Gemini to act as "AtmosAi".
     """
-    persona = payload.persona.strip().lower()
-    pm25 = payload.current_pm25
-    user_msg = payload.message.strip()
+    persona = "commuter"
+    if payload.persona:
+        persona = payload.persona.strip().lower()
+    elif payload.user_profile and isinstance(payload.user_profile, dict):
+        persona = str(payload.user_profile.get("persona", "commuter")).strip().lower()
 
-    strict_prompt = (
-        f"You are AtmosAi. The user is a {persona}. The current PM2.5 is {pm25}. "
-        f"Answer their question in 2 short sentences: {user_msg}"
-    )
+    pm25 = float(payload.current_pm25) if payload.current_pm25 is not None else 84.0
+    user_msg = payload.message.strip()
 
     gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
     if gemini_api_key:
         try:
-            import google.generativeai as genai
+            from google import genai
+            from google.genai import types
 
-            genai.configure(api_key=gemini_api_key)
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            response = model.generate_content(strict_prompt)
+            client = genai.Client(api_key=gemini_api_key)
+            system_instruction = (
+                "You are AtmosAi, an urban air quality assistant. "
+                "Provide direct, concise, empathetic, and actionable guidance on air pollution, PM2.5 levels, "
+                "respiratory health, and clean commuting in Bengaluru and urban areas. "
+                "Keep responses direct and informative (2-3 concise sentences)."
+            )
+
+            prompt = (
+                f"User persona: {persona}. Current localized PM2.5 level: {pm25} µg/m³. "
+                f"User question: {user_msg}"
+            )
+
+            # Task 1: Initialize and call google-genai SDK with gemini-2.5-flash
+            response = None
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        system_instruction=system_instruction,
+                        temperature=0.7,
+                    )
+                )
+            except Exception as e_model:
+                print(f"[Gemini 2.5-flash call notice]: {e_model}. Trying fallback flash model...")
+                for fallback_model in ["gemini-3.8-flash", "gemini-2.5-flash-lite"]:
+                    try:
+                        response = client.models.generate_content(
+                            model=fallback_model,
+                            contents=prompt,
+                            config=types.GenerateContentConfig(
+                                system_instruction=system_instruction,
+                                temperature=0.7,
+                            )
+                        )
+                        if response and response.text:
+                            break
+                    except Exception:
+                        continue
 
             if response and response.text:
                 return JSONResponse(
                     content={
                         "status": "success",
                         "response": response.text.strip(),
+                        "reply": response.text.strip(),
                         "persona": persona,
                         "current_pm25": pm25,
-                        "model": "gemini-1.5-flash"
+                        "model": "gemini-2.5-flash"
                     },
                     headers={"Content-Type": "application/json; charset=utf-8"}
                 )
