@@ -547,32 +547,27 @@ export const DashboardView: React.FC = () => {
       {/* Hero Air Quality Telemetry & Simulation Gauge */}
       <AQIHeroCard />
 
-      {/* Responsive Multi-Column Layout on Desktop / Single-Column on Mobile */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Task 3: Uniform 2-Column Dashboard Grid with items-start for Top Edge Alignment */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         
-        {/* Left Column (7 cols): Predicted vs Actual Graph */}
-        <div className="lg:col-span-7 flex flex-col">
+        {/* Card 1: Predicted vs Actual Graph */}
+        <div className="w-full">
           <PredictedVsActualChart />
         </div>
 
-        {/* Right Column (5 cols): Time-Shift Departure Slider & Exposure Card */}
-        <div className="lg:col-span-5 flex flex-col">
+        {/* Card 2: Time-Shift Departure Slider & Exposure Card */}
+        <div className="w-full">
           <TimeShiftSlider />
         </div>
 
-      </div>
-
-      {/* Gamified Health Impact & Clean Routing Callout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Gamified Lungs Saved (8 cols) */}
-        <div className="lg:col-span-8 flex flex-col">
+        {/* Card 3: Gamified Lungs Saved */}
+        <div className="w-full">
           <LungsSavedCard />
         </div>
 
-        {/* Clean Air Navigation Callout to dedicated Map Page (4 cols) */}
-        <div className="lg:col-span-4 flex flex-col">
-          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-stone-200/80 flex-1 flex flex-col justify-between shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+        {/* Card 4: Clean Air Navigation Callout to dedicated Map Page */}
+        <div className="w-full">
+          <div className="bg-white rounded-2xl p-5 sm:p-6 border border-stone-200/80 flex flex-col justify-between shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
             <div className="space-y-3">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm">

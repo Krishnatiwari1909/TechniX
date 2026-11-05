@@ -182,8 +182,8 @@ export const TimeShiftSlider: React.FC = () => {
       </div>
 
       {/* THE THICK, TOUCH-FRIENDLY TIME-SHIFT SLIDER */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-3">
           <label className="text-sm font-bold text-slate-800 flex items-center gap-2">
             <Clock className="w-4 h-4 text-emerald-600" />
             <span>Departure Time: <span className="text-emerald-700 font-mono text-base font-extrabold">{currentStep.label}</span></span>
@@ -193,36 +193,41 @@ export const TimeShiftSlider: React.FC = () => {
           </span>
         </div>
 
-        <div className="relative py-2">
-          <input
-            type="range"
-            min={0}
-            max={TIME_STEPS.length - 1}
-            step={1}
-            value={departureTimeIndex}
-            onChange={handleSliderChange}
-            className="touch-slider"
-            aria-label="Departure Time Slider"
-          />
+        {/* Task 2: Slider & Tick Container with mb-6 for Breathing Room */}
+        <div className="mb-6 space-y-2">
+          <div className="relative py-2">
+            <input
+              type="range"
+              min={0}
+              max={TIME_STEPS.length - 1}
+              step={1}
+              value={departureTimeIndex}
+              onChange={handleSliderChange}
+              className="touch-slider"
+              aria-label="Departure Time Slider"
+            />
+          </div>
+
+          {/* Time Ticks */}
+          <div className="flex justify-between text-[10px] text-slate-500 font-mono px-1">
+            <span>06:00 AM (Low)</span>
+            <span className="text-amber-700 font-bold">08:30 AM (Peak Smog)</span>
+            <span>10:30 AM (Dispersal)</span>
+          </div>
         </div>
 
-        {/* Time Ticks */}
-        <div className="flex justify-between text-[10px] text-slate-500 font-mono px-1">
-          <span>06:00 AM (Low)</span>
-          <span className="text-amber-700 font-bold">08:30 AM (Peak Smog)</span>
-          <span>10:30 AM (Dispersal)</span>
-        </div>
-
-        {/* Quick Shift Presets */}
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-xs text-slate-500 font-medium">Quick Shifts:</span>
+        {/* Task 1: Quick Shift Presets with Uniform Flex & Vertical Centering */}
+        <div className="flex flex-wrap items-center gap-3 mt-4">
+          <span className="text-xs text-slate-500 font-medium inline-flex items-center">
+            Quick Shifts:
+          </span>
           <button
             type="button"
             onClick={() => {
               setDepartureTimeIndex(4);
               setPm25Level(TIME_STEPS[4].pm25);
             }}
-            className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-[11px] text-slate-700 border border-stone-200 font-medium transition-all cursor-pointer"
+            className="px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-[11px] text-slate-700 border border-stone-200 font-medium transition-all cursor-pointer inline-flex items-center"
           >
             Early (07:00 AM)
           </button>
@@ -232,7 +237,7 @@ export const TimeShiftSlider: React.FC = () => {
               setDepartureTimeIndex(10);
               setPm25Level(TIME_STEPS[10].pm25);
             }}
-            className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-[11px] text-rose-800 border border-rose-200 font-medium transition-all cursor-pointer"
+            className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-[11px] text-rose-800 border border-rose-200 font-medium transition-all cursor-pointer inline-flex items-center"
           >
             Peak Hour (08:30 AM)
           </button>
@@ -242,7 +247,7 @@ export const TimeShiftSlider: React.FC = () => {
               setDepartureTimeIndex(18);
               setPm25Level(TIME_STEPS[18].pm25);
             }}
-            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[11px] text-emerald-800 border border-emerald-200 font-medium transition-all cursor-pointer"
+            className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-[11px] text-emerald-800 border border-emerald-200 font-medium transition-all cursor-pointer inline-flex items-center"
           >
             Cleanest (10:30 AM)
           </button>
