@@ -43,7 +43,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ onOpenAuth, onOpenSetup }) => {
       <div className="relative z-10 flex-1 flex flex-col min-w-0 md:ml-64 lg:ml-72">
         <Navbar onOpenAuth={onOpenAuth} />
 
-        <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-6">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-8 xl:px-12 py-4 sm:py-6 pb-24 md:pb-6">
           {activeTab === 'home' && <DashboardView />}
           {activeTab === 'map' && <MapView />}
           {activeTab === 'alerts' && <AlertsView />}

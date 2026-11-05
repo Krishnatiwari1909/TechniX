@@ -11,7 +11,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAuth }) => {
 
   return (
     <header className="sticky top-0 z-30 w-full bg-white/90 backdrop-blur-md border-b border-stone-200/80">
-      <div className="flex flex-wrap items-center justify-between gap-2 p-4 max-w-7xl mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 md:px-8 xl:px-12 py-4 max-w-7xl mx-auto">
         
         {/* Brand */}
         <div className="flex items-center gap-2.5">

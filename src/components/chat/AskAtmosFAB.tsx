@@ -205,7 +205,7 @@ export const AskAtmosFAB: React.FC = () => {
       {/* SLIDE-UP CHAT INTERFACE */}
       {chatOpen && (
         <div
-          className="fixed z-[60] right-2 sm:right-6 bottom-20 sm:bottom-6 w-[calc(100vw-1rem)] sm:w-[420px] max-w-full h-[75vh] sm:h-[580px] max-h-[85vh] flex flex-col rounded-3xl bg-white border border-stone-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 duration-300"
+          className="fixed z-[60] right-4 sm:right-6 bottom-20 sm:bottom-6 w-[90vw] h-[70vh] sm:w-[380px] sm:h-[500px] md:w-[450px] md:h-[650px] max-h-[90vh] flex flex-col rounded-3xl bg-white border border-stone-200 shadow-2xl overflow-hidden animate-in slide-in-from-bottom-6 duration-300"
           style={{
             paddingBottom: 'env(safe-area-inset-bottom, 0px)'
           }}

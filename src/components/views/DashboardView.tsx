@@ -367,7 +367,7 @@ export const DashboardView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       
       {/* Toast Notification for Emergency SOS */}
       {toastMessage && (
