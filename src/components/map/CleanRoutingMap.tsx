@@ -22,10 +22,15 @@ export const CleanRoutingMap: React.FC = () => {
 
     leafletMapRef.current = map;
 
-    // CartoDB Dark Matter tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      subdomains: 'abcd'
+    const mapboxToken = (import.meta.env.VITE_MAPBOX_API_KEY || import.meta.env.VITE_MAPBOX_TOKEN || '').trim();
+    const tileUrl = mapboxToken
+      ? `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`
+      : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+
+    // Mapbox Dark v11 or CartoDB Dark Matter tiles
+    L.tileLayer(tileUrl, {
+      maxZoom: 22,
+      attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; OpenStreetMap'
     }).addTo(map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -37,9 +42,9 @@ export const CleanRoutingMap: React.FC = () => {
       
       // Glow line
       const glowLine = L.polyline(route.coordinates, {
-        color: isClean ? '#10b981' : '#ef4444',
+        color: isClean ? '#00FF9D' : '#ef4444',
         weight: isClean ? 12 : 10,
-        opacity: 0.25,
+        opacity: 0.3,
         lineCap: 'round',
         lineJoin: 'round'
       });
@@ -47,9 +52,9 @@ export const CleanRoutingMap: React.FC = () => {
 
       // Core line
       const mainLine = L.polyline(route.coordinates, {
-        color: isClean ? '#10b981' : '#ef4444',
-        weight: isClean ? 7 : 6,
-        opacity: 0.95,
+        color: isClean ? '#00FF9D' : '#ef4444',
+        weight: isClean ? 6 : 5,
+        opacity: 0.9,
         lineCap: 'round',
         lineJoin: 'round',
         dashArray: isClean ? undefined : '10, 8'

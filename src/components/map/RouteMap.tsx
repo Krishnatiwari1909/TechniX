@@ -124,6 +124,8 @@ const POINT_A_DEFAULT: [number, number] = [12.9716, 77.5946]; // MG Road Central
 const POINT_B_DEFAULT: [number, number] = [12.9352, 77.6245]; // Koramangala Hub
 
 export const RouteMap: React.FC = () => {
+  const mapboxToken = (import.meta.env.VITE_MAPBOX_API_KEY || import.meta.env.VITE_MAPBOX_TOKEN || '').trim();
+
   const { 
     userProfile, 
     updateProfile, 
@@ -943,30 +945,49 @@ export const RouteMap: React.FC = () => {
           zoomControl={false}
           attributionControl={false}
           className="w-full h-full"
-          style={{ background: '#f8fafc' }}
+          style={{ background: '#090a0f' }}
         >
           {/* Phase 14 & 20 Task 2: Auto-Zoom & Live GPS Camera Follow */}
           <RouteCameraAutoFitter isNavigating={isNavigating} liveCoordinates={liveCoordinates} />
 
-          {/* OpenStreetMap Free Tiles */}
+          {/* Phase 28 Task 1: Mapbox Dark v11 Premium Tiles */}
           <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            maxZoom={19}
+            url={
+              mapboxToken
+                ? `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`
+                : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            }
+            attribution='&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>'
+            tileSize={256}
+            maxZoom={22}
           />
 
-          {/* Phase 20 Task 3: Google Maps-Style Route Line (Weight 8, Opacity 0.9, AtmosAi Emerald) */}
+          {/* Phase 28 Task 2: Neon Route Styling (Luminescent Cyan / Toxic-Alert Green, Weight 6, Opacity 0.9) */}
           {routeCoordinates.length > 0 && (
-            <Polyline
-              positions={routeCoordinates}
-              pathOptions={{
-                color: '#059669',
-                weight: 8,
-                opacity: 0.9,
-                lineCap: 'round',
-                lineJoin: 'round'
-              }}
-            />
+            <>
+              {/* Outer Luminescent Neon Glow */}
+              <Polyline
+                positions={routeCoordinates}
+                pathOptions={{
+                  color: activeRouteType === 'healthiest' ? '#00FF9D' : '#00E5FF',
+                  weight: 10,
+                  opacity: 0.35,
+                  lineCap: 'round',
+                  lineJoin: 'round'
+                }}
+              />
+              {/* Core Neon Clean-Air Route */}
+              <Polyline
+                positions={routeCoordinates}
+                pathOptions={{
+                  color: activeRouteType === 'healthiest' ? '#00FF9D' : '#00E5FF',
+                  weight: 6,
+                  opacity: 0.9,
+                  lineCap: 'round',
+                  lineJoin: 'round'
+                }}
+              />
+            </>
           )}
 
           {/* Phase 20 Task 1: Distinctive pulsing dot marker at live GPS coordinates */}
