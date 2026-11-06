@@ -53,6 +53,12 @@ export const Auth: React.FC<AuthProps> = ({
       return;
     }
 
+    // Phase 30 Task 2: Fallback check if VITE_SUPABASE_URL is missing
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      setErrorMessage("Configuration Error: Supabase URL is missing from .env");
+      return;
+    }
+
     setLoading(true);
 
     const effectiveName = trimmedName || trimmedEmail.split('@')[0] || 'Commuter';
@@ -148,9 +154,10 @@ export const Auth: React.FC<AuthProps> = ({
           onSignUpSuccess();
         }
       }
-    } catch (err: any) {
-      console.error('[Supabase Auth Error]:', err);
-      const errMsg = err?.message || String(err || '');
+    } catch (error: any) {
+      // Phase 30 Task 2: Enhanced raw error logging
+      console.error("Supabase Auth Error:", error);
+      const errMsg = error?.message || String(error || '');
       // Phase 26 Task 3: Specific fallback on Failed to fetch
       if (errMsg.includes('Failed to fetch')) {
         setErrorMessage('Database connection failed. Check VITE_SUPABASE_URL environment variables.');

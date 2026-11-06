@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Environment variables for Supabase (configured in .env)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://hfgavtrkzloetrrgvpnd.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_bTsnrGUd-0Bbpr_9q8G1NA_dbwxcWOn';
 
 export const isSupabaseConfigured = () => {
   const url = import.meta.env.VITE_SUPABASE_URL;
