@@ -25,13 +25,24 @@ export const CleanRoutingMap: React.FC = () => {
     const mapboxToken = (import.meta.env.VITE_MAPBOX_API_KEY || import.meta.env.VITE_MAPBOX_TOKEN || '').trim();
     const tileUrl = mapboxToken
       ? `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`
-      : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}';
 
-    // Mapbox Dark v11 or CartoDB Dark Matter tiles
+    // Mapbox Dark v11 or Esri World Dark Gray Canvas tiles (clean, unwatermarked dark theme)
     L.tileLayer(tileUrl, {
       maxZoom: 22,
-      attribution: '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; OpenStreetMap'
+      maxNativeZoom: 16,
+      attribution: mapboxToken
+        ? '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; OpenStreetMap'
+        : '&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, DeLorme, NAVTEQ'
     }).addTo(map);
+
+    if (!mapboxToken) {
+      // Add transparent dark reference overlay for street names & landmarks
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 22,
+        maxNativeZoom: 16
+      }).addTo(map);
+    }
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 

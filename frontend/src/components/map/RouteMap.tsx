@@ -951,17 +951,31 @@ export const RouteMap: React.FC = () => {
           {/* Phase 14 & 20 Task 2: Auto-Zoom & Live GPS Camera Follow */}
           <RouteCameraAutoFitter isNavigating={isNavigating} liveCoordinates={liveCoordinates} />
 
-          {/* Phase 28 Task 1 & Phase 29 Task 2: Mapbox Dark v11 Premium Tiles with maxZoom 22 */}
+          {/* Phase 28 Task 1 & Phase 29 Task 2: Mapbox Dark v11 Premium Tiles or Esri World Dark Gray Canvas */}
           <TileLayer
             url={
               mapboxToken
                 ? `https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token=${mapboxToken}`
-                : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
             }
-            attribution='&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>'
+            attribution={
+              mapboxToken
+                ? '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> <strong><a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a></strong>'
+                : '&copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, DeLorme, NAVTEQ'
+            }
             tileSize={256}
             maxZoom={22}
+            maxNativeZoom={16}
           />
+
+          {!mapboxToken && (
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+              tileSize={256}
+              maxZoom={22}
+              maxNativeZoom={16}
+            />
+          )}
 
           {/* Phase 29 Task 1: Unclipped, Ultra-Smooth Neon Route Rendering at Deep Zoom Levels */}
           {routeCoordinates.length > 0 && (

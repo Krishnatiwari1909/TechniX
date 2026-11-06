@@ -28,6 +28,36 @@ export const Auth: React.FC<AuthProps> = ({
     setErrorMessage(null);
   };
 
+  const handleContinueOffline = () => {
+    const effectiveName = fullName.trim() || email.trim().split('@')[0] || 'Commuter';
+    const effectiveEmail = email.trim() || 'demo@atmosai.local';
+    const localUserId = 'local_' + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem(
+      'atmos_auth',
+      JSON.stringify({
+        id: localUserId,
+        name: effectiveName,
+        email: effectiveEmail,
+        token: null,
+        isLoggedIn: true,
+        isLocalMode: true
+      })
+    );
+    localStorage.setItem('atmosai_authenticated', 'true');
+    localStorage.setItem('atmosai_user_name', effectiveName);
+    setLoading(false);
+
+    if (isSignUp) {
+      onSignUpSuccess();
+    } else {
+      if (localStorage.getItem('atmos_profile')) {
+        onLoginSuccess();
+      } else {
+        onSignUpSuccess();
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -266,9 +296,18 @@ export const Auth: React.FC<AuthProps> = ({
 
         {/* Error Alert */}
         {errorMessage && (
-          <div className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2 animate-in fade-in duration-200">
-            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-            <div className="leading-relaxed">{errorMessage}</div>
+          <div className="mb-5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex flex-col gap-2 animate-in fade-in duration-200">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed flex-1">{errorMessage}</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleContinueOffline}
+              className="text-left text-xs font-semibold text-emerald-700 hover:text-emerald-800 underline cursor-pointer pt-0.5"
+            >
+              Continue with Demo Session &rarr;
+            </button>
           </div>
         )}
 
