@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Clock, ArrowDownRight, Sparkles, AlertTriangle, Cpu } from 'lucide-react';
+import { calculateExposure } from '../../lib/api';
 
 export const TIME_STEPS = [
   { label: '06:00 AM', pm25: 56, rating: 'Moderate' },
@@ -52,20 +53,13 @@ export const TimeShiftSlider: React.FC = () => {
     let isCancelled = false;
     const fetchMLInversion = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/exposure', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            departure_time: currentStep.label,
-            departure_time_index: departureTimeIndex
-          })
+        const data = await calculateExposure({
+          departure_time: currentStep.label,
+          departure_time_index: departureTimeIndex
         });
-        if (res.ok) {
-          const data = await res.json();
-          if (!isCancelled && typeof data.inversion_multiplier === 'number') {
-            setInversionMultiplier(data.inversion_multiplier);
-            setModelLoaded(data.model_version?.includes('LightGBM') || false);
-          }
+        if (!isCancelled && typeof data.inversion_multiplier === 'number') {
+          setInversionMultiplier(data.inversion_multiplier);
+          setModelLoaded(data.model_version?.includes('LightGBM') || false);
         }
       } catch (err) {
         // Fallback approximation of the trained LightGBM curve

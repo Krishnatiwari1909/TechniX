@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { ChatMessage } from '../../types';
 import { speakNativeAlert, cancelNativeSpeech } from '../../utils/speech';
+import { sendChatMessage } from '../../lib/api';
 import { 
   Bot, 
   Sparkles, 
@@ -112,28 +113,18 @@ export const AskAtmosFAB: React.FC = () => {
     setIsTyping(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          persona: userProfile.persona || 'commuter',
-          current_pm25: pm25Level || 84,
-          user_profile: {
-            persona: userProfile.persona,
-            destination: userProfile.destination,
-            commute_mode: userProfile.commuteMode,
-            sensitivities: userProfile.sensitivities,
-            exposure_multiplier: userProfile.exposureMultiplier
-          }
-        })
+      const data = await sendChatMessage({
+        message: text,
+        persona: userProfile.persona || 'commuter',
+        current_pm25: pm25Level || 84,
+        user_profile: {
+          persona: userProfile.persona,
+          destination: userProfile.destination,
+          commute_mode: userProfile.commuteMode,
+          sensitivities: userProfile.sensitivities,
+          exposure_multiplier: userProfile.exposureMultiplier
+        }
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP Error: ${response.status}`);
-      }
-
-      const data = await response.json();
 
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),

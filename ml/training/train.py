@@ -96,19 +96,16 @@ def train_and_export_model():
         multiplier = round(preds[i] / baseline_midday, 2)
         print(f"[{row['note']}] -> Predicted PM2.5: {preds[i]:.1f} µg/m³ (Multiplier: {multiplier}x vs midday)")
 
-    # Save to root and backend directories for robust discovery
-    root_dir = Path(__file__).resolve().parent
-    export_paths = [
-        root_dir / "lgbm_inversion.pkl",
-        root_dir / "backend" / "lgbm_inversion.pkl"
-    ]
+    # Save to canonical ml/models directory
+    ml_models_dir = Path(__file__).resolve().parents[1] / "models"
+    ml_models_dir.mkdir(parents=True, exist_ok=True)
+    export_path = ml_models_dir / "lgbm_inversion.pkl"
 
-    for p in export_paths:
-        try:
-            joblib.dump(model, p)
-            print(f"[AtmosAi ML] Model exported successfully to: {p}")
-        except Exception as e:
-            print(f"[AtmosAi ML] Could not save to {p}: {e}")
+    try:
+        joblib.dump(model, export_path)
+        print(f"[AtmosAi ML] Model exported successfully to: {export_path}")
+    except Exception as e:
+        print(f"[AtmosAi ML] Could not save to {export_path}: {e}")
 
 if __name__ == "__main__":
     train_and_export_model()

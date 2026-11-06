@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MOCK_ALERTS } from '../../data/mockData';
 import { useApp } from '../../context/AppContext';
 import { speakNativeAlert } from '../../utils/speech';
+import { dispatchEmergencySOS } from '../../lib/api';
 import { AlertTriangle, Bell, ShieldAlert, PhoneCall, Sliders } from 'lucide-react';
 
 export const AlertsView: React.FC = () => {
@@ -19,22 +20,15 @@ export const AlertsView: React.FC = () => {
       const activePersona = (userProfile.persona || 'Asthma').charAt(0).toUpperCase() + (userProfile.persona || 'Asthma').slice(1);
       const activePM25 = pm25Level ?? 84;
 
-      // 1. Call Backend /api/sos
-      const res = await fetch('http://localhost:8000/api/sos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contact_number: userProfile.emergencyContact || "+15553829912",
-          email: 'emergency@atmosai.dev',
-          persona: activePersona,
-          current_pm25: activePM25
-        })
+      // 1. Call Backend /api/sos via centralized API client
+      const data = await dispatchEmergencySOS({
+        contact_number: userProfile.emergencyContact || "+15553829912",
+        email: 'emergency@atmosai.dev',
+        persona: activePersona,
+        current_pm25: activePM25
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setDispatchStatus(`Dispatched (${data.dispatched_via?.join(', ') || 'OK'})`);
-      }
+      setDispatchStatus(`Dispatched (${data.dispatched_via?.join(', ') || 'OK'})`);
 
       // 2. Play 100% on-device native voice alert
       const alertSpeech = "AtmosAi Alert: Hazardous particulate levels detected. Seek indoor shelter immediately.";

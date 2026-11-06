@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Wind, Droplets, Thermometer, RefreshCw, Cpu, Radio } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, Tooltip, YAxis, XAxis } from 'recharts';
+import { fetchForecast } from '../../lib/api';
 
 interface ForecastPoint {
   time: string;
@@ -33,22 +34,19 @@ export const AQIHeroCard: React.FC = () => {
 
   useEffect(() => {
     let isCancelled = false;
-    const fetchForecast = async () => {
+    const loadForecast = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/forecast');
-        if (res.ok) {
-          const data = await res.json();
-          if (!isCancelled && Array.isArray(data) && data.length > 0) {
-            setForecastData(data);
-          }
+        const data = await fetchForecast();
+        if (!isCancelled && Array.isArray(data) && data.length > 0) {
+          setForecastData(data);
         }
       } catch (err) {
         console.warn('[AQIHeroCard] LightGBM forecast fetch error:', err);
       }
     };
 
-    fetchForecast();
-    const interval = setInterval(fetchForecast, 120000);
+    loadForecast();
+    const interval = setInterval(loadForecast, 120000);
     return () => {
       isCancelled = true;
       clearInterval(interval);

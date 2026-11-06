@@ -59,35 +59,6 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
   };
 
   const handleSaveAndRedirect = async () => {
-    // Phase 25 Task 3: Replace with Supabase database insert/update
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUser = user || (() => {
-        try {
-          const auth = JSON.parse(localStorage.getItem('atmos_auth') || '{}');
-          return auth.id ? { id: auth.id } : null;
-        } catch {
-          return null;
-        }
-      })();
-
-      if (currentUser?.id) {
-        const { data, error } = await supabase.from('profiles').upsert({
-          user_id: currentUser.id,
-          commute_mode: commuteMode,
-          sensitivities: sensitivities,
-          name: userName || userProfile.name || 'Commuter',
-          updated_at: new Date().toISOString()
-        });
-
-        if (error) {
-          console.warn('[SetupWizard] Supabase profiles upsert notice:', error);
-        }
-      }
-    } catch (dbErr) {
-      console.warn('[SetupWizard] Supabase insert warning:', dbErr);
-    }
-
     const wizardData = {
       commuteMode,
       sensitivities,
@@ -102,12 +73,53 @@ export const SetupWizard: React.FC<SetupWizardProps> = ({ onComplete, onClose })
       onboardingCompleted: true
     };
 
+    // 1. Attempt database persistence if user has an authenticated session
+    let dbPersisted = false;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUser = user || (() => {
+        try {
+          const auth = JSON.parse(localStorage.getItem('atmos_auth') || '{}');
+          return auth.id ? { id: auth.id } : null;
+        } catch {
+          return null;
+        }
+      })();
+
+      if (currentUser?.id) {
+        const { error } = await supabase.from('profiles').upsert({
+          user_id: currentUser.id,
+          name: wizardData.name,
+          commute_mode: wizardData.commuteMode,
+          sensitivities: wizardData.sensitivities,
+          persona: wizardData.persona,
+          destination: wizardData.destination,
+          emergency_name: wizardData.emergencyName,
+          emergency_contact: wizardData.emergencyContact,
+          commute_time: wizardData.commuteTime,
+          return_time: wizardData.returnTime,
+          exposure_multiplier: wizardData.exposureMultiplier,
+          updated_at: new Date().toISOString()
+        });
+
+        if (error) {
+          console.warn('[SetupWizard] Supabase profiles upsert notice:', error);
+        } else {
+          dbPersisted = true;
+        }
+      }
+    } catch (dbErr) {
+      console.warn('[SetupWizard] Supabase insert warning:', dbErr);
+    }
+
+    // 2. Always persist locally for offline resilience & guest support
     updateProfile(wizardData);
     try {
       localStorage.setItem('atmos_profile', JSON.stringify({
         commuteMode,
         sensitivities,
-        ...wizardData
+        ...wizardData,
+        _db_persisted: dbPersisted
       }));
       localStorage.setItem('atmosai_user_profile_v2', JSON.stringify(wizardData));
       localStorage.setItem('atmosai_visited', 'true');

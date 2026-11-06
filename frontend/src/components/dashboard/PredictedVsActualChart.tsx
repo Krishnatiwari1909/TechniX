@@ -11,6 +11,7 @@ import {
 } from 'recharts';
 import { INITIAL_HOURLY_DATA } from '../../data/mockData';
 import { TrendingUp, AlertCircle, Sparkles } from 'lucide-react';
+import { fetchModelEvaluation } from '../../lib/api';
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -74,22 +75,19 @@ export const PredictedVsActualChart: React.FC = () => {
   // Phase 17 Task 2: Fetch 16-hour evaluation from /api/model-evaluation
   useEffect(() => {
     let isMounted = true;
-    const fetchEvaluation = async () => {
+    const loadEvaluation = async () => {
       try {
-        const res = await fetch('http://localhost:8000/api/model-evaluation');
-        if (res.ok) {
-          const json = await res.json();
-          if (Array.isArray(json) && json.length > 0) {
-            const mapped = json.map((item: any) => ({
-              time: item.time,
-              actual_pm25: item.actual_pm25,
-              predicted_pm25: item.predicted_pm25,
-              actualPM25: item.actual_pm25,
-              predictedPM25: item.predicted_pm25
-            }));
-            if (isMounted) {
-              setData(mapped);
-            }
+        const json = await fetchModelEvaluation();
+        if (Array.isArray(json) && json.length > 0) {
+          const mapped = json.map((item: any) => ({
+            time: item.time,
+            actual_pm25: item.actual_pm25,
+            predicted_pm25: item.predicted_pm25,
+            actualPM25: item.actual_pm25,
+            predictedPM25: item.predicted_pm25
+          }));
+          if (isMounted) {
+            setData(mapped);
           }
         }
       } catch (err) {
@@ -99,7 +97,7 @@ export const PredictedVsActualChart: React.FC = () => {
       }
     };
 
-    fetchEvaluation();
+    loadEvaluation();
     return () => {
       isMounted = false;
     };

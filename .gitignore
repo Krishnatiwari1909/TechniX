@@ -4,35 +4,49 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
-# Node dependencies & build
-node_modules
-dist
-dist-ssr
+# Node dependencies & builds (Root & Frontend module)
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+dist-ssr/
+frontend/dist-ssr/
 *.local
 
-# Python backend virtualenv & cache
-backend/venv/
-backend/.env
-backend/.evn
+# Python virtual environments & bytecode
 venv/
+.venv/
+backend/venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Machine Learning Models (Preserve single canonical model weights)
+*.pkl
+*.joblib
+!ml/models/lgbm_inversion.pkl
+
+# Environment variables & secrets
 .env
 .evn
 *.env
 *.evn
+frontend/.env
+backend/.env
 !.env.example
+!frontend/.env.example
 !backend/.env.example
-__pycache__/
-*.py[cod]
-*$py.class
 
-# Editor directories and files
+# IDE & OS files
 .vscode/*
 !.vscode/extensions.json
-.idea
+!.vscode/settings.json
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj

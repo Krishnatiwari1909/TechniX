@@ -6,6 +6,7 @@ import { LungsSavedCard } from '../dashboard/LungsSavedCard';
 import { useApp } from '../../context/AppContext';
 import { CommuteMode } from '../../types';
 import { supabase, isSupabaseConfigured, calculateDynamicMultiplier } from '../../lib/supabase';
+import { sendChatMessage, dispatchEmergencySOS, getWebSocketUrl } from '../../lib/api';
 import { 
   ArrowRight, 
   Navigation, 
@@ -217,22 +218,12 @@ export const DashboardView: React.FC = () => {
     const hiddenPrompt = `User is commuting to their saved destination (${destination}) via ${mode}. Current AQI is ${currentAqi} (PM2.5: ${pm25Level} µg/m³). Give a 2-sentence safety briefing.`;
 
     try {
-      const response = await fetch('http://localhost:8000/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: hiddenPrompt,
-          persona: userProfile.persona || 'commuter',
-          current_pm25: pm25Level
-        })
+      const data = await sendChatMessage({
+        message: hiddenPrompt,
+        persona: userProfile.persona || 'commuter',
+        current_pm25: pm25Level
       });
-
-      if (!response.ok) {
-        throw new Error(`API error ${response.status}`);
-      }
-
-      const data = await response.json();
-      setBriefingResponse(data.response);
+      setBriefingResponse(data.response || data.reply || null);
     } catch (err) {
       console.warn('Commute briefing API error, falling back:', err);
       setBriefingResponse(
@@ -251,7 +242,8 @@ export const DashboardView: React.FC = () => {
 
     const connectWebSocket = () => {
       try {
-        ws = new WebSocket('ws://localhost:8000/ws/telemetry');
+        const wsUrl = getWebSocketUrl();
+        ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
           if (!isDisposed) {
@@ -437,30 +429,17 @@ export const DashboardView: React.FC = () => {
       const formattedPersona = activePersona.charAt(0).toUpperCase() + activePersona.slice(1);
       const activePM25 = pm25Level ?? 84;
 
-      const sosPayload = {
+      const data = await dispatchEmergencySOS({
         contact_number: userProfile.emergencyContact || "+15553829912",
         email: "emergency@atmosai.dev",
         persona: formattedPersona,
         current_pm25: activePM25
-      };
-
-      const response = await fetch('http://localhost:8000/api/sos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sosPayload)
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setToastMessage(
-          data.alert_text || 
-          `AtmosAi EMERGENCY: The user is in a hazardous zone (PM2.5: ${activePM25}). Their health profile is marked as: ${formattedPersona}. Please contact them immediately.`
-        );
-      } else {
-        setToastMessage(
-          `AtmosAi EMERGENCY: The user is in a hazardous zone (PM2.5: ${activePM25}). Their health profile is marked as: ${formattedPersona}. Please contact them immediately.`
-        );
-      }
+      setToastMessage(
+        data.alert_text || 
+        `AtmosAi EMERGENCY: The user is in a hazardous zone (PM2.5: ${activePM25}). Their health profile is marked as: ${formattedPersona}. Please contact them immediately.`
+      );
     } catch (error) {
       console.warn('Backend /api/sos unreachable, using offline fallback', error);
       const fallbackPersona = (userProfile.persona || 'Asthma').charAt(0).toUpperCase() + (userProfile.persona || 'Asthma').slice(1);
