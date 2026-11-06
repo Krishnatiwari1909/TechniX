@@ -14,8 +14,12 @@ class ChatRequest(BaseModel):
 
 
 class VoiceAlertRequest(BaseModel):
-    alert_text: str = Field(..., description="Emergency advisory script to convert to voice")
+    alert_text: Optional[str] = Field(None, description="Emergency advisory script to convert to voice")
+    message: Optional[str] = Field(None, description="Alternative message parameter")
     return_base64: Optional[bool] = Field(False, description="Whether to return base64 JSON instead of audio stream")
+
+    def get_effective_text(self) -> str:
+        return self.alert_text or self.message or "High particulate alert. Atmospheric inversion detected."
 
 
 class SOSRequest(BaseModel):

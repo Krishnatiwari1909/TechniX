@@ -89,7 +89,7 @@ async def chat_endpoint(payload: ChatRequest):
 async def voice_alert_endpoint(payload: VoiceAlertRequest):
     try:
         return synthesize_voice_alert(
-            alert_text=payload.alert_text,
+            alert_text=payload.get_effective_text(),
             return_base64=payload.return_base64 or False
         )
     except ValueError as ve:

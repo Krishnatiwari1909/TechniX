@@ -1,19 +1,31 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { PERSONA_CONFIGS } from '../../data/mockData';
+import { supabase } from '../../supabaseClient';
 import { 
   User, 
   Clock, 
   Phone, 
   Download, 
   CheckCircle2, 
-  RefreshCw 
+  RefreshCw,
+  LogOut
 } from 'lucide-react';
 
 export const ProfileView: React.FC = () => {
   const { userProfile, setShowOnboarding } = useApp();
   const [pwaInstalled, setPwaInstalled] = useState(false);
   const personaInfo = PERSONA_CONFIGS[userProfile.persona] || PERSONA_CONFIGS.runner;
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch {}
+    localStorage.removeItem('atmos_auth');
+    localStorage.removeItem('atmos_supabase_token');
+    localStorage.removeItem('atmosai_authenticated');
+    window.location.reload();
+  };
 
   const handleInstallClick = () => {
     const promptEvent = (window as any).deferredPwaPrompt;
@@ -52,14 +64,26 @@ export const ProfileView: React.FC = () => {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowOnboarding(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-sm self-start sm:self-auto cursor-pointer"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Edit Persona / Relaunch Setup</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setShowOnboarding(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Edit Persona / Setup</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-stone-100 hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-stone-200 text-xs font-bold transition-all cursor-pointer"
+            title="Sign out of current account"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
 
       {/* Exposure Multiplier Analysis Card */}
