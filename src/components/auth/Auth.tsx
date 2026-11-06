@@ -22,9 +22,9 @@ export const Auth: React.FC<AuthProps> = ({
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
   const handleAutofillDemo = () => {
-    setFullName('Demo User');
-    setEmail('demo@atmosai.tech');
-    setPassword('technix2026!');
+    setFullName('Krishna');
+    setEmail('krishna.tiwaricap@gmail.com');
+    setPassword('123456');
     setErrorMessage(null);
   };
 
