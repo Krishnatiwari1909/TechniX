@@ -18,7 +18,8 @@ export const AQIHeroCard: React.FC = () => {
     windDirection, 
     userLocation,
     isSimulating,
-    setIsSimulating
+    setIsSimulating,
+    selectedLocation
   } = useApp();
 
   // Phase 11: 3-Hour LightGBM Inversion Forecast data

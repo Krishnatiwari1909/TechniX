@@ -2,6 +2,18 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, PersonaType, CommuteMode } from '../types';
 import { PERSONA_CONFIGS } from '../data/mockData';
 
+export interface DemoLocation {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
+export const DEMO_LOCATIONS: DemoLocation[] = [
+  { name: 'Kumbalgodu (Demo)', lat: 12.8945, lng: 77.4646 },
+  { name: 'MG Road Central', lat: 12.9716, lng: 77.5946 },
+  { name: 'Indiranagar Hub', lat: 12.9784, lng: 77.6408 }
+];
+
 interface AppContextType {
   pm25Level: number;
   setPm25Level: (level: number) => void;
@@ -26,16 +38,26 @@ interface AppContextType {
   setSelectedRouteId: (id: string) => void;
   userLocation: { lat: number; lng: number; name?: string; locality?: string } | null;
   setUserLocation: (loc: { lat: number; lng: number; name?: string; locality?: string } | null) => void;
+  selectedLocation: DemoLocation;
+  setSelectedLocation: (loc: DemoLocation) => void;
+  demoLocations: DemoLocation[];
   isLocating: boolean;
   isSimulating: boolean;
   setIsSimulating: (simulating: boolean) => void;
 }
 
+export const KUMBALGODU_COORDS = {
+  lat: 12.8945,
+  lng: 77.4646,
+  name: 'Kumbalgodu (Demo)',
+  locality: 'Kumbalgodu'
+};
+
 export const BENGALURU_FALLBACK_COORDS = {
-  lat: 12.9716,
-  lng: 77.5946,
-  name: 'Bengaluru (MG Road)',
-  locality: 'Bengaluru'
+  lat: 12.8945,
+  lng: 77.4646,
+  name: 'Kumbalgodu (Demo)',
+  locality: 'Kumbalgodu'
 };
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -89,8 +111,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [chatOpen, setChatOpen] = useState<boolean>(false);
   const [selectedRouteId, setSelectedRouteId] = useState<string>('route-clean');
   
-  // Task 2: Auto-Geolocation with guaranteed Bengaluru [12.9716, 77.5946] Fallback
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; name?: string; locality?: string } | null>(BENGALURU_FALLBACK_COORDS);
+  // Phase 33: Global Location State (Kumbalgodu default)
+  const [selectedLocation, setSelectedLocationState] = useState<DemoLocation>(DEMO_LOCATIONS[0]);
+
+  const setSelectedLocation = (loc: DemoLocation) => {
+    setSelectedLocationState(loc);
+    setUserLocation({
+      lat: loc.lat,
+      lng: loc.lng,
+      name: loc.name,
+      locality: loc.name
+    });
+  };
+
+  // Task 2: Auto-Geolocation with guaranteed Kumbalgodu [12.8945, 77.4646] Fallback
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number; name?: string; locality?: string } | null>(KUMBALGODU_COORDS);
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
 
@@ -191,6 +226,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
+  // Phase 33: Dynamic API Sync for AQI based on selectedLocation
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchLocationAqi = async () => {
+      try {
+        const res = await fetch(
+          `/api/aqi?lat=${selectedLocation.lat}&lng=${selectedLocation.lng}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (!isCancelled && typeof data.pm25 === 'number') {
+            const livePM = Math.round(data.pm25);
+            setPm25Level(livePM);
+            setTelemetryHistory(prev => [
+              ...prev.slice(-9),
+              { time: selectedLocation.name.split(' ')[0], pm25: livePM }
+            ]);
+            return;
+          }
+        }
+      } catch (err) {
+        // Fallback to direct Open-Meteo
+        try {
+          const directRes = await fetch(
+            `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${selectedLocation.lat}&longitude=${selectedLocation.lng}&current=pm2_5`
+          );
+          if (directRes.ok) {
+            const directData = await directRes.json();
+            if (!isCancelled && directData?.current?.pm2_5 != null) {
+              const livePM = Math.round(directData.current.pm2_5);
+              setPm25Level(livePM);
+              setTelemetryHistory(prev => [
+                ...prev.slice(-9),
+                { time: selectedLocation.name.split(' ')[0], pm25: livePM }
+              ]);
+            }
+          }
+        } catch (e2) {
+          console.warn('[Dynamic AQI Sync] Direct fetch notice:', e2);
+        }
+      }
+    };
+
+    fetchLocationAqi();
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedLocation.lat, selectedLocation.lng, selectedLocation.name]);
+
   // Phase 24 Task 4: Dynamic math multiplier:
   // Base: 1.0x (Car), 1.5x (Two-Wheeler/Public Transit), 1.8x (Bicycle), 2.0x (Walking).
   // Penalty: +0.5x if Asthma or Cardiovascular is checked.
@@ -267,6 +351,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedRouteId,
         userLocation,
         setUserLocation,
+        selectedLocation,
+        setSelectedLocation,
+        demoLocations: DEMO_LOCATIONS,
         isLocating,
         isSimulating,
         setIsSimulating

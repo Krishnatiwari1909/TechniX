@@ -36,7 +36,10 @@ export const DashboardView: React.FC = () => {
     departureTimeIndex,
     userLocation,
     isLocating,
-    isSimulating
+    isSimulating,
+    selectedLocation,
+    setSelectedLocation,
+    demoLocations
   } = useApp();
 
   const isSimulatingRef = useRef(isSimulating);
@@ -495,6 +498,28 @@ export const DashboardView: React.FC = () => {
               Personalized Dashboard
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+            {/* Phase 33: Sleek Global Location Selector */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-white text-slate-800 border-2 border-emerald-500/50 hover:border-emerald-600 shadow-2xs transition-all">
+              <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0 animate-pulse" />
+              <label htmlFor="global-location-select" className="text-[10px] uppercase font-black tracking-wider text-emerald-700">Location:</label>
+              <select
+                id="global-location-select"
+                aria-label="Select City or Demo Location"
+                value={selectedLocation.name}
+                onChange={(e) => {
+                  const target = (demoLocations || []).find(l => l.name === e.target.value);
+                  if (target) setSelectedLocation(target);
+                }}
+                className="bg-transparent font-bold text-slate-900 text-xs focus:outline-none cursor-pointer pr-1"
+              >
+                {(demoLocations || []).map((loc) => (
+                  <option key={loc.name} value={loc.name} className="font-semibold text-slate-800">
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-700 border border-stone-200">
               <MapPin className="w-3 h-3 text-emerald-600" />
               <span>{isLocating ? 'Detecting GPS...' : userLocation?.name ? `GPS: ${userLocation.name}` : `GPS: ${userProfile.destination}`}</span>

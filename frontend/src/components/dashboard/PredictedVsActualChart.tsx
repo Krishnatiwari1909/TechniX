@@ -12,6 +12,7 @@ import {
 import { INITIAL_HOURLY_DATA } from '../../data/mockData';
 import { TrendingUp, AlertCircle, Sparkles } from 'lucide-react';
 import { fetchModelEvaluation } from '../../lib/api';
+import { useApp } from '../../context/AppContext';
 
 interface CustomTooltipProps {
   active?: boolean;
@@ -63,6 +64,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
 };
 
 export const PredictedVsActualChart: React.FC = () => {
+  const { selectedLocation } = useApp();
   const [data, setData] = useState<any[]>(() => 
     INITIAL_HOURLY_DATA.map(d => ({
       ...d,
@@ -72,12 +74,12 @@ export const PredictedVsActualChart: React.FC = () => {
   );
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Phase 17 Task 2: Fetch 16-hour evaluation from /api/model-evaluation
+  // Phase 17 Task 2 & Phase 33: Fetch 16-hour evaluation from /api/model-evaluation with dynamic coordinates
   useEffect(() => {
     let isMounted = true;
     const loadEvaluation = async () => {
       try {
-        const json = await fetchModelEvaluation();
+        const json = await fetchModelEvaluation(selectedLocation.lat, selectedLocation.lng);
         if (Array.isArray(json) && json.length > 0) {
           const mapped = json.map((item: any) => ({
             time: item.time,
@@ -101,7 +103,7 @@ export const PredictedVsActualChart: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [selectedLocation.lat, selectedLocation.lng]);
 
   // Phase 22 Task 2: Calculate real MAE dynamically across overlapping historical hours
   const dynamicMAE = useMemo(() => {

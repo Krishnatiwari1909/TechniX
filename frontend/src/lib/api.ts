@@ -168,8 +168,12 @@ export async function sendChatMessage(payload: ChatApiRequest): Promise<ChatApiR
 /**
  * 2. 3-Hour Half-Hourly Inversion Forecast
  */
-export async function fetchForecast(baseTime?: string): Promise<ForecastPoint[]> {
-  const query = baseTime ? `?base_time=${encodeURIComponent(baseTime)}` : '';
+export async function fetchForecast(baseTime?: string, lat?: number, lng?: number): Promise<ForecastPoint[]> {
+  const params = new URLSearchParams();
+  if (baseTime) params.set('base_time', baseTime);
+  if (lat !== undefined) params.set('lat', String(lat));
+  if (lng !== undefined) params.set('lng', String(lng));
+  const query = params.toString() ? `?${params.toString()}` : '';
   return apiFetch<ForecastPoint[]>(`/api/forecast${query}`, {
     method: 'GET',
   });
@@ -178,8 +182,21 @@ export async function fetchForecast(baseTime?: string): Promise<ForecastPoint[]>
 /**
  * 3. 16-Hour Historical & Future Model Evaluation
  */
-export async function fetchModelEvaluation(): Promise<ModelEvaluationPoint[]> {
-  return apiFetch<ModelEvaluationPoint[]>('/api/model-evaluation', {
+export async function fetchModelEvaluation(lat?: number, lng?: number): Promise<ModelEvaluationPoint[]> {
+  const params = new URLSearchParams();
+  if (lat !== undefined) params.set('lat', String(lat));
+  if (lng !== undefined) params.set('lng', String(lng));
+  const query = params.toString() ? `?${params.toString()}` : '';
+  return apiFetch<ModelEvaluationPoint[]>(`/api/model-evaluation${query}`, {
+    method: 'GET',
+  });
+}
+
+/**
+ * 4. Real-Time Dynamic AQI
+ */
+export async function fetchAqi(lat: number = 12.8945, lng: number = 77.4646): Promise<{ latitude: number; longitude: number; pm25: number; aqi: number; status: string }> {
+  return apiFetch(`/api/aqi?lat=${lat}&lng=${lng}`, {
     method: 'GET',
   });
 }
