@@ -21,14 +21,42 @@ export const Auth: React.FC<AuthProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
 
+  const handleAutofillDemo = () => {
+    setFullName('Demo User');
+    setEmail('demo@atmosai.tech');
+    setPassword('technix2026!');
+    setErrorMessage(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setSuccessNotice(null);
+
+    const trimmedEmail = email.trim();
+    const trimmedName = fullName.trim();
+
+    // Phase 26 Task 2: Form Validation Before Submission
+    if (isSignUp && !trimmedName) {
+      setErrorMessage('Name is required.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setErrorMessage('Please enter a valid email address.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters.');
+      return;
+    }
+
     setLoading(true);
 
-    const effectiveName = fullName.trim() || email.split('@')[0] || 'Commuter';
-    const effectiveEmail = email.trim();
+    const effectiveName = trimmedName || trimmedEmail.split('@')[0] || 'Commuter';
+    const effectiveEmail = trimmedEmail;
 
     try {
       if (isSignUp) {
@@ -122,7 +150,13 @@ export const Auth: React.FC<AuthProps> = ({
       }
     } catch (err: any) {
       console.error('[Supabase Auth Error]:', err);
-      setErrorMessage(err.message || 'Authentication failed. Please verify credentials.');
+      const errMsg = err?.message || String(err || '');
+      // Phase 26 Task 3: Specific fallback on Failed to fetch
+      if (errMsg.includes('Failed to fetch')) {
+        setErrorMessage('Database connection failed. Check VITE_SUPABASE_URL environment variables.');
+      } else {
+        setErrorMessage(errMsg || 'Authentication failed. Please verify credentials.');
+      }
       setLoading(false);
     }
   };
@@ -211,7 +245,10 @@ export const Auth: React.FC<AuthProps> = ({
                   type="text"
                   required={isSignUp}
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    if (errorMessage) setErrorMessage(null);
+                  }}
                   placeholder="e.g. Alex Chen"
                   className="w-full pl-10 pr-4 py-2.5 bg-stone-50 border border-stone-200/90 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 transition-all"
                 />
@@ -230,7 +267,10 @@ export const Auth: React.FC<AuthProps> = ({
                 type="email"
                 required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (errorMessage) setErrorMessage(null);
+                }}
                 placeholder="you@domain.com"
                 className="w-full pl-10 pr-4 py-2.5 bg-stone-50 border border-stone-200/90 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 transition-all"
               />
@@ -249,7 +289,10 @@ export const Auth: React.FC<AuthProps> = ({
                 required
                 minLength={6}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errorMessage) setErrorMessage(null);
+                }}
                 placeholder="••••••••"
                 className="w-full pl-10 pr-4 py-2.5 bg-stone-50 border border-stone-200/90 rounded-xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white focus:ring-1 focus:ring-emerald-500/20 transition-all"
               />
@@ -257,6 +300,17 @@ export const Auth: React.FC<AuthProps> = ({
             {isSignUp && (
               <span className="text-[10px] text-slate-400 block">Must be at least 6 characters</span>
             )}
+          </div>
+
+          {/* Phase 26 Task 1: The "Fill for Demo" Button */}
+          <div className="flex justify-end pt-1">
+            <button
+              type="button"
+              onClick={handleAutofillDemo}
+              className="text-xs text-emerald-700 hover:text-emerald-800 font-medium inline-flex items-center gap-1 hover:underline cursor-pointer transition-colors"
+            >
+              <span>🪄 Autofill for Demo</span>
+            </button>
           </div>
 
           {/* Submit Button */}
