@@ -1,18 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Environment variables for Supabase (configured in .env)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://hfgavtrkzloetrrgvpnd.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_bTsnrGUd-0Bbpr_9q8G1NA_dbwxcWOn';
+const rawUrl = import.meta.env.VITE_SUPABASE_URL;
+const rawKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const supabaseUrl = (rawUrl && !rawUrl.includes('your-project-id') && !rawUrl.includes('placeholder'))
+  ? rawUrl
+  : 'https://hfgavtrkzloetrrgvpnd.supabase.co';
+
+const supabaseAnonKey = (rawKey && !rawKey.includes('placeholder') && !rawKey.includes('YOUR_EXISTING') && !rawKey.includes('your-supabase'))
+  ? rawKey
+  : 'sb_publishable_bTsnrGUd-0Bbpr_9q8G1NA_dbwxcWOn';
 
 export const isSupabaseConfigured = (): boolean => {
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
   return Boolean(
-    url && 
-    key && 
-    !url.includes('your-project-id') && 
-    !url.includes('placeholder') &&
-    url.startsWith('http')
+    supabaseUrl &&
+    supabaseAnonKey &&
+    supabaseUrl.startsWith('http')
   );
 };
 
