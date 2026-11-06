@@ -942,6 +942,7 @@ export const RouteMap: React.FC = () => {
         <MapContainer
           center={originCoords}
           zoom={13}
+          maxZoom={22}
           zoomControl={false}
           attributionControl={false}
           className="w-full h-full"
@@ -950,7 +951,7 @@ export const RouteMap: React.FC = () => {
           {/* Phase 14 & 20 Task 2: Auto-Zoom & Live GPS Camera Follow */}
           <RouteCameraAutoFitter isNavigating={isNavigating} liveCoordinates={liveCoordinates} />
 
-          {/* Phase 28 Task 1: Mapbox Dark v11 Premium Tiles */}
+          {/* Phase 28 Task 1 & Phase 29 Task 2: Mapbox Dark v11 Premium Tiles with maxZoom 22 */}
           <TileLayer
             url={
               mapboxToken
@@ -962,29 +963,37 @@ export const RouteMap: React.FC = () => {
             maxZoom={22}
           />
 
-          {/* Phase 28 Task 2: Neon Route Styling (Luminescent Cyan / Toxic-Alert Green, Weight 6, Opacity 0.9) */}
+          {/* Phase 29 Task 1: Unclipped, Ultra-Smooth Neon Route Rendering at Deep Zoom Levels */}
           {routeCoordinates.length > 0 && (
             <>
               {/* Outer Luminescent Neon Glow */}
               <Polyline
                 positions={routeCoordinates}
+                noClip={true}
+                smoothFactor={1}
                 pathOptions={{
                   color: activeRouteType === 'healthiest' ? '#00FF9D' : '#00E5FF',
                   weight: 10,
                   opacity: 0.35,
                   lineCap: 'round',
-                  lineJoin: 'round'
+                  lineJoin: 'round',
+                  noClip: true,
+                  smoothFactor: 1
                 }}
               />
               {/* Core Neon Clean-Air Route */}
               <Polyline
                 positions={routeCoordinates}
+                noClip={true}
+                smoothFactor={1}
                 pathOptions={{
                   color: activeRouteType === 'healthiest' ? '#00FF9D' : '#00E5FF',
                   weight: 6,
                   opacity: 0.9,
                   lineCap: 'round',
-                  lineJoin: 'round'
+                  lineJoin: 'round',
+                  noClip: true,
+                  smoothFactor: 1
                 }}
               />
             </>

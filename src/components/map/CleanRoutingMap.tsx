@@ -45,6 +45,8 @@ export const CleanRoutingMap: React.FC = () => {
         color: isClean ? '#00FF9D' : '#ef4444',
         weight: isClean ? 12 : 10,
         opacity: 0.3,
+        noClip: true,
+        smoothFactor: 1,
         lineCap: 'round',
         lineJoin: 'round'
       });
@@ -55,6 +57,8 @@ export const CleanRoutingMap: React.FC = () => {
         color: isClean ? '#00FF9D' : '#ef4444',
         weight: isClean ? 6 : 5,
         opacity: 0.9,
+        noClip: true,
+        smoothFactor: 1,
         lineCap: 'round',
         lineJoin: 'round',
         dashArray: isClean ? undefined : '10, 8'
